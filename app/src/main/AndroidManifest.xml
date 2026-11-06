@@ -188,7 +188,7 @@
         <service
             android:name=".DshaAccessibilityService"
             android:exported="false"
-            android:label="DSHA 配对助手"
+            android:label="BK102 配对助手"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />

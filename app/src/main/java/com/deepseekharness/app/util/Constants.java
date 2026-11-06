@@ -12,7 +12,7 @@ public final class Constants {
   public static final String PREFS = "deepseekharness";
 
   /** 当前维护仓库；作者与历史报告链接分别保持原来源。 */
-  public static final String REPOSITORY_URL = "https://github.com/DSH-APP/DSHA";
+  public static final String REPOSITORY_URL = "https://github.com/beyondchenlin/bk102";
 
   public static final String SITE_HOST = "dsha.cc";
   public static final String SITE_URL = "https://" + SITE_HOST + "/";

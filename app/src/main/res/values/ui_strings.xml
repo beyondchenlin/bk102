@@ -80,7 +80,7 @@
     <string name="ui_m0081" formatted="false">"只看自己装的"</string>
 
 
-    <string name="ui_m0084" formatted="false">"后台断连时，可允许 DSHA 后台运行并减少电池限制。厂商仍可能暂停后台；恢复前先确认无线调试已开启，再点「验证已有连接」。"</string>
+    <string name="ui_m0084" formatted="false">"后台断连时，可允许 BK102 后台运行并减少电池限制。厂商仍可能暂停后台；恢复前先确认无线调试已开启，再点「验证已有连接」。"</string>
 
 
 

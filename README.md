@@ -1,4 +1,10 @@
-# DSHA
+# BK102
+
+BK102 是由陈林维护的 [DSHA](https://github.com/DSH-APP/DSHA) 二次开发版本，使用独立的 BK102 品牌与签名。原项目及第三方组件的版权和许可保留，详见 [LICENSE](LICENSE) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+本分支尚未完成 ARM64 真机的运行时验收。以下内容为上游项目说明，其中发布包、支持渠道、版本和服务信息不代表 BK102 的独立承诺。
+
+## 上游 DSHA 项目说明
 
 <p align="center">
   <b>DeepSeek Harness 安卓启动器</b><br>

@@ -20,7 +20,7 @@ public final class UiText {
   }
 
   public static String choose(String chinese, String english) {
-    return "en".equals(language) ? english : chinese;
+    return brand("en".equals(language) ? english : chinese);
   }
 
   /** External/user text and protocol values must never be application translation keys. */
@@ -38,9 +38,14 @@ public final class UiText {
   }
 
   public static String text(String value) {
-    if (value == null || !"en".equals(language)) return value;
-    String translated = UiMessages.EN.get(value);
-    return translated == null ? value : translated;
+    if (value == null) return null;
+    String catalogTranslation = UiMessages.EN.get(value);
+    if (catalogTranslation == null) return value;
+    return brand("en".equals(language) ? catalogTranslation : value);
+  }
+
+  private static String brand(String value) {
+    return value == null ? null : value.replaceAll("(?<![A-Za-z0-9_./-])DSHA(?![A-Za-z0-9_./-])", "BK102");
   }
 
   public static CharSequence text(CharSequence value) {

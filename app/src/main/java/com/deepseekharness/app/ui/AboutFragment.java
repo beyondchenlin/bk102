@@ -14,13 +14,13 @@ public final class AboutFragment extends Fragment {
     CardPage ui = new CardPage(requireContext(), UiText.choose("关于 DSHA", "About DSHA"), "");
     android.widget.FrameLayout emblem = new android.widget.FrameLayout(requireContext());
     android.widget.ImageView mark = new android.widget.ImageView(requireContext());
-    mark.setImageResource(R.drawable.ic_ui2_prompt);
+    mark.setImageResource(R.drawable.dsha_brand);
     mark.setBackgroundResource(R.drawable.bg_ui2_mark);
     mark.setPadding(ui.dp(14), ui.dp(14), ui.dp(14), ui.dp(14));
     emblem.addView(
         mark, new android.widget.FrameLayout.LayoutParams(ui.dp(64), ui.dp(64), Gravity.CENTER));
     ui.content.addView(emblem, new LinearLayout.LayoutParams(-1, ui.dp(84)));
-    TextView brand = ui.text("DSHA", 30, R.color.text);
+    TextView brand = ui.text("BK102", 30, R.color.text);
     brand.setTypeface(null, android.graphics.Typeface.BOLD);
     brand.setGravity(Gravity.CENTER);
     brand.setPadding(0, ui.dp(16), 0, ui.dp(10));
@@ -37,6 +37,7 @@ public final class AboutFragment extends Fragment {
     version.setPadding(0, 0, 0, ui.dp(24));
     ui.content.addView(version);
     LinearLayout metadata = ui.card();
+    ui.kv(metadata, UiText.choose("开发者", "Developer"), "陈林");
     ui.kv(metadata, UiText.choose("包名", "Package"), BuildConfig.APPLICATION_ID);
     ui.kv(
         metadata,
