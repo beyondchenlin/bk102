@@ -1,0 +1,16 @@
+/* 多选是首页的临时操作状态，不改变正常浏览或编辑器。 */
+.dce .dce-home-select-mode{white-space:nowrap;font-size:13px;padding:6px 10px}
+.dce .dce-home-select-mode[aria-pressed=true]{border-color:#376bfa;background:#e9efff;color:#2658d4}
+.dce-home-bulk{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:-4px 0 18px;padding:12px 16px;background:#edf2ff;border:1px solid #d8e2ff;border-radius:8px}
+.dce-home-bulk>label{display:flex;align-items:center;gap:9px;font-size:14px;color:#20242d;cursor:pointer}
+.dce-home-selected-count{margin-right:auto;color:#697180;font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.dce .dce-home-bulk button{font-size:14px;min-height:36px;padding:6px 12px}
+.dce .dce-home-check input,.dce .dce-home-bulk input{appearance:auto;accent-color:#376bfa;width:18px;height:18px;min-height:18px;margin:0;padding:0;flex:none;cursor:pointer}
+.dce .dce-home-check{position:absolute;z-index:3;right:12px;top:12px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:5px;background:#ffffffed;cursor:pointer}
+.dce-home-items .dce-home-item.is-selected{box-shadow:inset 0 0 0 2px #376bfa;background:#f3f6ff}
+.dce .dce-home-item.is-selected .dce-home-open:hover{background:transparent}
+.is-selecting .is-cards .is-copy .dce-home-item-title{padding-right:28px}
+.dce .is-selecting .is-list .dce-home-check{right:auto;left:14px;top:50%;transform:translateY(-50%);background:transparent}
+.dce .is-selecting .is-list .dce-home-open,.is-selecting .dce-home-list-heading{padding-left:58px}
+.is-selecting .is-list .dce-home-cover{left:58px}
+@container(max-width:760px){.dce-home-bulk{gap:12px;padding:12px}.dce-home-selected-count{margin-right:0}.dce-home-bulk>label{margin-right:auto}.dce-home-bulk>.primary{margin-left:auto}.dce .is-selecting .is-list .dce-home-open{padding-left:48px}.dce .is-selecting .is-list .dce-home-check{left:8px}.is-selecting .is-list .dce-home-cover{left:48px}}

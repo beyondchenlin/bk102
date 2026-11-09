@@ -196,7 +196,7 @@ final class GuestPluginScripts {
         + command
         + " --root /root --state-root /run/dsha-rc1-state --startup-id "
         + ShellQuote.arg(startupId)
-        + " --approved-root /sdcard/Documents/dshdata --approved-root /storage/emulated/0/Documents/dshdata 2>&1";
+        + " --approved-root /sdcard/Documents/bk102data --approved-root /storage/emulated/0/Documents/bk102data 2>&1";
   }
 
   BoundedProcessRunner.Result manager(String args, String taskId, PluginDownloadSource source)

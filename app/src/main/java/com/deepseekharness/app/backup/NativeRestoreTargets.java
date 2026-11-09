@@ -34,7 +34,7 @@ public final class NativeRestoreTargets
     files = context.getFilesDir().getCanonicalFile();
     rootfs = com.deepseekharness.app.util.GuestPaths.rootfs(files);
     File publicRoot = Environment.getExternalStorageDirectory().getCanonicalFile(),
-        publicData = new File(publicRoot, "Documents/dshdata"),
+        publicData = new File(publicRoot, "Documents/bk102data"),
         stable = new File(files, "user-data-v5/dsh"),
         legacy = new File(rootfs, "root/.dsh");
     resolver =

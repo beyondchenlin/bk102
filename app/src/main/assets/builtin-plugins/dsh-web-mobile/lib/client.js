@@ -7563,7 +7563,8 @@ function createOverlayTask(t, toggleSidebar, panelExit) {
                     }, BACKDROP_FADE_MS + 60);
                 }
             }
-            if (heroPhase() && !drawerOpen() && fab === null) {
+            const ownBack = panelExit?.ownsBackControl?.() === true;
+            if (heroPhase() && !drawerOpen() && !ownBack && fab === null) {
                 fab = document.createElement('button');
                 fab.type = 'button';
                 fab.dataset.mobileNav = 'fab';
@@ -7572,7 +7573,7 @@ function createOverlayTask(t, toggleSidebar, panelExit) {
                 fab.addEventListener('click', onFabClick);
                 frame.appendChild(fab);
             }
-            else if ((!heroPhase() || drawerOpen()) && fab !== null) {
+            else if ((!heroPhase() || drawerOpen() || ownBack) && fab !== null) {
                 fab.remove();
                 fab = null;
             }
@@ -10435,6 +10436,8 @@ function installReconciler(ctx) {
                 'data-aionui-explorer-open',
                 'data-aionui-preview-open',
                 'data-mobile-preview-full',
+                'data-dsh-panel-navigation',
+                'data-dsh-panel-depth',
             ],
         });
         core.activate();
@@ -14979,6 +14982,14 @@ function createPanelExit(layout) {
     function subpageControl() {
         if (!panelOwnsMainArea())
             return null;
+        // DSH_PANEL_NAVIGATION_V1: 只读取当前面板，忽略退出动画中的副本。
+        const panel = panelElement();
+        const root = panel?.matches('[data-dsh-panel-navigation="v1"]') ? panel : panel?.querySelector('[data-dsh-panel-navigation="v1"]');
+        if (root) {
+            const depth = Number(root.getAttribute('data-dsh-panel-depth'));
+            const control = root.querySelector('button[data-dsh-panel-back="true"]');
+            return Number.isInteger(depth) && depth > 0 && depth <= 24 && control instanceof HTMLButtonElement && !control.disabled && control.getClientRects().length ? control : null;
+        }
         const el = document.querySelector(PANEL_SUBPAGE_BACK);
         return el instanceof HTMLElement ? el : null;
     }
@@ -15095,6 +15106,19 @@ function createPanelExit(layout) {
         supported,
         panelOpen: panelOwnsMainArea,
         subpageOpen,
+        ownsBackControl: () => {
+            const panel = panelElement();
+            const root = panel?.matches('[data-dsh-panel-navigation="v1"]') ? panel : panel?.querySelector('[data-dsh-panel-navigation="v1"]');
+            const control = root?.querySelector('button[data-dsh-panel-back="true"]');
+            const owns = control instanceof HTMLButtonElement && !control.disabled && control.getClientRects().length > 0;
+            if (root && root.getAttribute('data-dsh-own-back') !== String(owns)) root.setAttribute('data-dsh-own-back', String(owns));
+            return owns;
+        },
+        rowBack: () => {
+            const control = subpageControl();
+            if (control?.getAttribute('data-dsh-panel-back') === 'true') back();
+            else exit();
+        },
         task: createPanelBackExitTask(exit, supported, back, subpageControl),
         dispose,
     };
@@ -15132,7 +15156,7 @@ function createPanelBackExitTask(exitPanel, supported, backOneLevel, subpageCont
     /** Entries pre-pushed for host subpage levels — one per level we descend. */
     let extraArmed = 0;
     /** Which host back control is on screen; its level tells us where we are. */
-    let lastControl = null;
+    let lastLevel = 0;
     /** Set by a popstate climb so ensure() does not arm for the level it just left. */
     let justClimbed = false;
     let listening = false;
@@ -15145,13 +15169,13 @@ function createPanelBackExitTask(exitPanel, supported, backOneLevel, subpageCont
             selfBackTimer = null;
         }
     }
-    function selfBack() {
+    function selfBack(count = 1) {
         selfBackPending = true;
         if (selfBackTimer !== null)
             window.clearTimeout(selfBackTimer);
         selfBackTimer = window.setTimeout(clearSelfBack, 1200);
         try {
-            history.back();
+            history.go(-count);
         }
         catch {
             clearSelfBack();
@@ -15183,6 +15207,10 @@ function createPanelBackExitTask(exitPanel, supported, backOneLevel, subpageCont
     function levelOf(control) {
         if (control === null)
             return 0;
+        if (control.getAttribute('data-dsh-panel-back') === 'true') {
+            const depth = Number(control.getAttribute('data-dsh-panel-depth'));
+            return Number.isInteger(depth) && depth >= 0 && depth <= 24 ? depth : 0;
+        }
         return control.className.includes('_moreBack') ? 1 : 2;
     }
     function onPopState() {
@@ -15234,42 +15262,45 @@ function createPanelBackExitTask(exitPanel, supported, backOneLevel, subpageCont
                 return;
             listen();
             if (!panelViewOpen()) {
-                if (rootArmed) {
-                    rootArmed = false;
-                    selfBack();
-                }
-                lastControl = null;
+                const count = (rootArmed ? 1 : 0) + extraArmed;
+                rootArmed = false;
+                extraArmed = 0;
+                if (count) selfBack(count);
+                lastLevel = 0;
                 justClimbed = false;
                 return;
             }
             armRoot();
             const control = subpageControl();
-            const previous = levelOf(lastControl);
+            const previous = lastLevel;
             const current = levelOf(control);
             if (current === previous)
                 return;
             const climbed = justClimbed;
             justClimbed = false;
-            lastControl = control;
+            lastLevel = current;
             if (current > previous) {
-                if (!climbed)
-                    armExtra();
+                if (!climbed) {
+                    const count = control?.getAttribute('data-dsh-panel-back') === 'true' ? current - previous : 1;
+                    for (let i = 0; i < count; i++) armExtra();
+                }
                 return;
             }
             // Went up without a back press (host crumb or the FAB): give back the
             // entry that level was holding.
             if (!climbed && extraArmed > 0) {
-                extraArmed -= 1;
-                selfBack();
+                const count = Math.min(extraArmed, previous - current);
+                extraArmed -= count;
+                selfBack(count);
             }
         },
         dispose: () => {
             unlisten();
             clearSelfBack();
-            if (rootArmed) {
-                rootArmed = false;
-                selfBack();
-            }
+            const count = (rootArmed ? 1 : 0) + extraArmed;
+            rootArmed = false;
+            extraArmed = 0;
+            if (count) selfBack(count);
         },
     };
 }
@@ -15613,7 +15644,7 @@ function apply(ctx) {
     // Sidebar panel exit: re-tapping the already-selected panel row returns to
     // the conversation (the system-back route is a reconciler task; both call the
     // same action).
-    (0, panel_exit_ts_1.installPanelRowExit)(ctx, panelExit.exit);
+    (0, panel_exit_ts_1.installPanelRowExit)(ctx, panelExit.rowBack);
     // Session deletion, injected into each session row's ⋯ menu (beside
     // rename / fork / archive) with a confirm dialog. Mobile-only.
     (0, session_menu_ts_1.installSessionMenuDelete)(ctx);

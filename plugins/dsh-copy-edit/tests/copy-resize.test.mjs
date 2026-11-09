@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {fitCopySidebar} from '../src/copy-resize.mjs';
+test('列表缩窗时给正文保留空间，再放大恢复原偏好',()=>{const preferred=660;for(const width of [1920,1024,800,1920]){const layout=fitCopySidebar(width,preferred);assert(layout.width>=200);assert(layout.width+428<=width);if(width===1920)assert.equal(layout.width,preferred);}assert.equal(preferred,660);});
+test('窄屏停用拖拽，损坏或旧偏好恢复安全默认',()=>{assert.equal(fitCopySidebar(760,650).desktop,false);assert.equal(fitCopySidebar(390,650).desktop,false);for(const pref of [null,undefined,'500',{},NaN,Infinity])assert.equal(fitCopySidebar(1600,pref).width,280);assert.equal(fitCopySidebar(1600,-400).width,200);assert.equal(fitCopySidebar(1600,100000).width,720);});

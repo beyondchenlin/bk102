@@ -143,6 +143,7 @@ public class WebPreviewActivity extends PictureInPictureActivity implements WebF
     Integer themeColor;
     String routeRequestSent;
     WebBlobDownload blobDownload;
+    CopyEditMediaBridge copyEditMedia;
     PendingUpload pendingUpload;
     // 页面取消后仍等待旧系统结果排空，不能把它交给新页面的上传请求。
     PendingUpload pendingPicker;
@@ -152,6 +153,12 @@ public class WebPreviewActivity extends PictureInPictureActivity implements WebF
 
     @Override
     protected void onCleared() {
+      retireDetachedRenderer();
+      uploadRequests.close();
+    }
+
+    // 渲染器退出后这个ViewModel仍会被新Activity复用，上传状态只能失效，不能永久关闭。
+    void retireDetachedRenderer() {
       if (pendingUpload != null) {
         pendingUpload.complete(null);
         pendingUpload = null;
@@ -163,14 +170,34 @@ public class WebPreviewActivity extends PictureInPictureActivity implements WebF
         pendingPicker.complete(null);
         pendingPicker = null;
       }
-      uploadRequests.close();
+      uploadRequests.invalidate();
+      if (copyEditMedia != null) {
+        copyEditMedia.close();
+        copyEditMedia = null;
+      }
       if (view != null) view.destroy();
       view = null;
-      if (blobDownload != null) blobDownload.close();
+      if (blobDownload != null) {
+        blobDownload.close();
+        blobDownload = null;
+      }
       if (uploadSession != null) {
         uploadSession.close();
         uploadSession = null;
       }
+      ready = false;
+      needsStreamResume = false;
+      authUrl = null;
+      pendingHistory = null;
+      compatibilityScript = null;
+      scriptLanguage = null;
+      pageEvents = null;
+      themeGate = null;
+      themeColor = null;
+      routeRequestSent = null;
+      pageNavigation++;
+      pageSession.clear();
+      navigation.cancel();
     }
   }
 
@@ -857,6 +884,17 @@ public class WebPreviewActivity extends PictureInPictureActivity implements WebF
   }
 
   private void attachClients(WebView view) {
+    if (retained.copyEditMedia == null) {
+      final Retained page = retained;
+      retained.copyEditMedia =
+          CopyEditMediaFactory.attach(
+              view,
+              baseUrl,
+              () -> {
+                WebPreviewActivity host = page.owner.get();
+                return host != null && host.isCurrentPage(view) && !host.pageFailed;
+              });
+    }
     if (retained.pageEvents == null || !retained.pageEvents.owns(view))
       retained.pageEvents =
           new com.deepseekharness.app.util.StartupPageGate(view, startupGeneration, baseUrl);
@@ -958,6 +996,14 @@ public class WebPreviewActivity extends PictureInPictureActivity implements WebF
 
   private class PreviewClient extends WebViewClient {
     @Override
+    public android.webkit.WebResourceResponse shouldInterceptRequest(
+        WebView view, WebResourceRequest request) {
+      CopyEditMediaBridge media = retained.copyEditMedia;
+      android.webkit.WebResourceResponse response = media == null ? null : media.intercept(request);
+      return response != null ? response : super.shouldInterceptRequest(view, request);
+    }
+
+    @Override
     public boolean shouldOverrideUrlLoading(WebView view, String url) {
       if (!isCurrentPage(view)) return true;
       if (WebPreviewPolicy.pageDownload(baseUrl, url)) return false;
@@ -983,6 +1029,7 @@ public class WebPreviewActivity extends PictureInPictureActivity implements WebF
       if (!isCurrentPage(view)) return;
       WebFullscreenUi.cancelIme(WebPreviewActivity.this);
       retained.pageNavigation++;
+      if (retained.copyEditMedia != null) retained.copyEditMedia.reset();
       retained.themeGate =
           new com.deepseekharness.app.util.BrowserThemeGate(view, retained.pageSession.identity());
       retained.routeRequestSent = null;
@@ -1328,6 +1375,10 @@ public class WebPreviewActivity extends PictureInPictureActivity implements WebF
   }
 
   private void destroyWebView() {
+    if (retained != null && retained.copyEditMedia != null) {
+      retained.copyEditMedia.close();
+      retained.copyEditMedia = null;
+    }
     WebFullscreenUi.cancelIme(this);
     WebFullscreenUi.applyThemeColor(this, getColor(R.color.surface));
     if (microphoneRequests != null) {
@@ -1403,6 +1454,7 @@ public class WebPreviewActivity extends PictureInPictureActivity implements WebF
   // 画中画仍可见但 Activity 已暂停；完全不可见时才暂停网页绘制。
   @Override
   protected void onStop() {
+    if (retained != null && retained.copyEditMedia != null) retained.copyEditMedia.suspend();
     if (retained != null) retained.routeRequestSent = null;
     if (!pictureInPictureActiveOrTransitioning() && webView != null) {
       retained.needsStreamResume = true;
@@ -1414,6 +1466,7 @@ public class WebPreviewActivity extends PictureInPictureActivity implements WebF
   @Override
   protected void onStart() {
     super.onStart();
+    if (retained != null && retained.copyEditMedia != null) retained.copyEditMedia.resume();
     if (!pictureInPictureActiveOrTransitioning() && webView != null) webView.onResume();
   }
 
@@ -1590,7 +1643,23 @@ public class WebPreviewActivity extends PictureInPictureActivity implements WebF
     if (downloads != null) downloads.dismiss();
     if (isChangingConfigurations() && webView != null) {
       container.removeView(webView);
-      webView.setWebViewClient(new WebViewClient());
+      // 旋转/语言切换的交接窗口也必须处理渲染器退出；默认Client会终止宿主进程。
+      final Retained detached = retained;
+      webView.setWebViewClient(
+          new WebViewClient() {
+            @androidx.annotation.RequiresApi(26)
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+              WebPreviewActivity owner = detached.owner.get();
+              if (owner != null && owner.webView == view) {
+                return owner.new PreviewClient().onRenderProcessGone(view, detail);
+              }
+              if (detached.view == view) {
+                detached.retireDetachedRenderer();
+              }
+              return true;
+            }
+          });
       webView.setWebChromeClient(null);
       webView.setDownloadListener(null);
       ((android.content.MutableContextWrapper) webView.getContext())

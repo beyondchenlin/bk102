@@ -1,0 +1,9 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <provider android:name="com.deepseekharness.media.NativeMediaFileProvider"
+        android:authorities="${applicationId}.copy-edit-media"
+        android:exported="false" android:grantUriPermissions="true">
+      <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/copy_edit_media_paths"/>
+    </provider>
+  </application>
+</manifest>

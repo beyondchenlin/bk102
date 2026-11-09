@@ -52,7 +52,7 @@ public final class ProfileSettingsTransaction implements HostDataTransaction.Tar
             fs,
             com.deepseekharness.app.util.GuestPaths.rootfs(files),
             publicRoot,
-            List.of(new File(files, "user-data-v5"), new File(publicRoot, "Documents/dshdata")))
+            List.of(new File(files, "user-data-v5"), new File(publicRoot, "Documents/bk102data")))
         .resolve(home)
         .file;
   }

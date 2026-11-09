@@ -1,0 +1,11 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 独立验证包：网络仅供本机WebView验收，无存储广权、设备桥或后台服务。 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <application android:label="文案剪辑·媒体验证" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false" android:usesCleartextTraffic="true">
+        <activity android:name=".WebProbeActivity" android:exported="false" android:windowSoftInputMode="adjustResize"/>
+        <activity android:name=".PlaybackProbeActivity" android:exported="false"/>
+        <activity android:name=".SpikeActivity" android:exported="true">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+        </activity>
+    </application>
+</manifest>

@@ -70,15 +70,15 @@ public class UiTextTest {
         "Opacity 60% · Lines 1 · Text size 13sp",
         UiText.format("不透明度 %s · 行数 %s · 字号 %s", "60%", 1, "13sp"));
   }
+
   @Test
   public void brandingPreservesPathsAndExternalValues() {
     UiText.setLanguage("zh");
-    assertEquals("在 BK102 中，路径 Download/DSHA", UiText.choose("在 DSHA 中，路径 Download/DSHA", ""));
+    assertEquals("在 BK Harenss 中，路径 Download/DSHA", UiText.choose("在 DSHA 中，路径 Download/DSHA", ""));
     String user = "DSHA user content";
     assertSame(user, UiText.raw(user));
     assertSame(user, UiText.text(user));
     UiText.setLanguage("en");
-    assertEquals("About BK102", UiText.choose("关于 DSHA", "About DSHA"));
+    assertEquals("About BK Harenss", UiText.choose("关于 DSHA", "About DSHA"));
   }
-
 }

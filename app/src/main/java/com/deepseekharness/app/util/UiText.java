@@ -45,7 +45,9 @@ public final class UiText {
   }
 
   private static String brand(String value) {
-    return value == null ? null : value.replaceAll("(?<![A-Za-z0-9_./-])DSHA(?![A-Za-z0-9_./-])", "BK102");
+    return value == null
+        ? null
+        : value.replaceAll("(?<![A-Za-z0-9_./-])DSHA(?![A-Za-z0-9_./-])", "BK Harenss");
   }
 
   public static CharSequence text(CharSequence value) {

@@ -1,0 +1,45 @@
+/* 与 rc.2 宿主实测 14/22、13/20、12/18 层级对齐；仅限定插件。
+   作品画布内 PNG 的字体/尺寸由工程数据决定，不读取这些 UI token。 */
+.dce {
+  --dce-ui:14px; --dce-small:13px; --dce-meta:12px;
+  --dce-ui-line:22px; --dce-small-line:20px; --dce-meta-line:18px;
+  --dce-title:20px; --dce-section:16px; --dce-reading:18px;
+  font-family:var(--dsw-font-family,var(--dsh-font-family-text-default,system-ui,sans-serif));
+  font-size:var(--dce-ui); line-height:var(--dce-ui-line); font-weight:400;
+}
+.dce h1 {font-size:var(--dce-title);line-height:28px;font-weight:500;letter-spacing:0}
+.dce h2 {font-size:var(--dce-section);line-height:24px;font-weight:500;letter-spacing:0}
+.dce :is(.dce-header,.dce-document-toolbar,.dce-home-categories,.dce-home-view-switch) :is(button,select),
+.dce :is(.dce-voice-field select,.dce-composition-heading [role=tab]) {
+  font-size:var(--dce-ui);line-height:var(--dce-ui-line);font-weight:400;
+}
+.dce .dce-header button {min-height:36px;padding-block:6px}
+.dce .dce-search input {font-size:var(--dce-ui);line-height:var(--dce-ui-line);padding-block:7px}
+.dce :is(.dce-home-section-actions,.dce-composition-actions,.dce-editor-topline,.dce-timeline-tools,.dce-properties) :is(button,select,input:not([type=range]):not([type=checkbox]):not([type=color]),textarea) {
+  font-size:var(--dce-small);line-height:var(--dce-small-line);
+}
+.dce :is(.dce-home-topline h1,.dce-list-heading h2,.dce-voice-dialog-heading h2) {font-size:var(--dce-title);line-height:28px;font-weight:500}
+.dce :is(.dce-home-section-heading h2,.dce-attachment-heading h2) {font-size:var(--dce-section);line-height:24px;font-weight:500}
+.dce :is(.dce-pane-heading h2,.dce-properties h2,.dce-editor-topline>span) {font-size:var(--dce-ui);line-height:var(--dce-ui-line);font-weight:500}
+.dce .dce-home-item-title strong {font-size:var(--dce-section);line-height:24px;font-weight:500}
+.dce .is-list .dce-home-item-title strong,.dce .dce-copy-item strong {font-size:var(--dce-ui);line-height:var(--dce-ui-line);font-weight:500}
+.dce .dce-home-excerpt {font-size:var(--dce-ui);line-height:24px}
+.dce .is-list .dce-home-excerpt,.dce .dce-copy-item>span {font-size:var(--dce-small);line-height:var(--dce-small-line)}
+.dce .copy-title {font-size:22px;line-height:32px;font-weight:500;letter-spacing:0}
+.dce .copy-text {font-size:var(--dce-reading);line-height:1.85}
+.dce .dce-document-toolbar button,.dce .dce-copy-version {min-height:36px;padding-block:6px}
+.dce .dce-category-dialog {font:var(--dce-ui)/var(--dce-ui-line) var(--dsw-font-family,system-ui,sans-serif)}
+.dce :is(.dce-voice-note,.dce-home-updated,.dce-home-version,.dce-category-tag,.dce-binding-info,.dce-music-duration) {font-size:var(--dce-meta);line-height:var(--dce-meta-line)}
+
+/* 保留手机点击面积；字号不跟点击面积或宽屏尺寸放大。
+   时间轴手柄保持自己的命中层，后续触摸手势模块独立处理。 */
+@container (max-width:760px) {
+  .dce.dce :is(.dce-header,.dce-home-section-actions,.dce-home-categories,.dce-document-toolbar,.dce-copy-audio,.dce-copy-composition,.dce-editor-topline,.dce-playback,.dce-timeline-tools,.dce-properties,.dce-media-library,.dce-voice-dialog,.dce-category-dialog) :is(button,select) {min-height:var(--dce-control,44px)}
+  .dce.dce :is(.dce-audio-play,.dce-composition-playback button) {width:var(--dce-control,44px);height:var(--dce-control,44px);flex-basis:var(--dce-control,44px)}
+  .dce.dce .dce-home-menu>summary {min-height:var(--dce-control,44px)!important;width:var(--dce-control,44px)!important}
+  .dce.dce .dce-home-check {width:var(--dce-control,44px);height:var(--dce-control,44px)}
+  .dce .dce-home-bulk>label {min-height:var(--dce-control,44px)}
+  .dce .dce-search input {min-height:var(--dce-control,44px)}
+}
+.dce .dce-draft-recovery{display:flex;align-items:center;gap:12px;padding:8px 16px;flex-wrap:wrap;font-size:13px;line-height:20px}
+.dce .dce-draft-recovery select{max-width:100%;min-width:0;min-height:var(--dce-control,44px);flex:1}

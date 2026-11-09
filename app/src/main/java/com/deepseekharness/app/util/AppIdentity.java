@@ -5,15 +5,15 @@ public final class AppIdentity {
   private AppIdentity() {}
 
   public static String applicationId() {
-    return "dsh.android.client";
+    return "io.github.beyondchenlin.bk102";
   }
 
   public static String displayName() {
-    return "DSHA";
+    return "BK Harenss";
   }
 
   public static String publicDirectoryName() {
-    return "DSHA";
+    return "BK102";
   }
 
   public static String defaultUpdateFeed() {

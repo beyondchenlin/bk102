@@ -18,3 +18,5 @@ dependencyResolutionManagement {
 }
 rootProject.name = "deepseekharness"
 include ':app'
+include ':copy-edit-media'
+project(':copy-edit-media').projectDir = file('components/copy-edit-media')

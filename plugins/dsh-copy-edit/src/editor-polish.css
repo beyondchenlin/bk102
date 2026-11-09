@@ -1,0 +1,48 @@
+/* 四区结构、尺寸变量和 8px 手柄保持；只收整桌面编辑器的视觉层级。 */
+.dce-page-edit{--paper:#202228;--surface:#292c34;--ink:#eceef3;--muted:#a0a5b0;--line:#343740;--action:#4977ed}
+.dce-page-edit .dce-editor-topline{height:52px;padding:8px 18px}
+.dce-page-edit .dce-editor-topline>span{font-size:15px;font-weight:500}
+.dce-page-edit .dce-editor-topline button,.dce-page-edit .dce-editor-topline a{min-height:34px;font-size:13px;padding:7px 12px}
+.dce-page-edit .dce-media-library{padding:16px 14px 0}
+.dce-page-edit .dce-pane-heading h2{font-size:15px}
+.dce-page-edit .dce-library-tabs{margin:12px 0 16px;gap:8px;border:0}
+.dce-page-edit .dce-library-tabs button{font-size:13px;min-height:32px;padding:6px 12px;border:0;border-radius:5px}
+.dce-page-edit .dce-library-tabs button[aria-pressed=true]{background:#343842}
+.dce-page-edit .dce-media-grid{gap:16px 12px}
+.dce-page-edit .dce-media-item .dce-asset-name{font-size:12px;margin-top:8px}
+.dce-page-edit .dce-media-item .dce-actions{gap:6px;margin-top:7px}
+.dce-page-edit .dce-media-item button{border-color:transparent;background:#292c34;min-height:30px;font-size:12px}
+.dce-page-edit .dce-media-item button:hover{background:#3a3e49}
+.dce-page-edit .dce-preview-stage{padding:18px}
+.dce-page-edit .dce-playback{border-top:0;padding:10px 12px;gap:8px}
+.dce-page-edit .dce-playback button{border-color:transparent;background:#24272e}
+.dce-page-edit .dce-playback .dce-play{background:#e8ebf2;color:#202228;min-width:128px;font-weight:500}
+.dce-page-edit .dce-timecode{font-size:12px}
+.dce-page-edit .dce-source-scrub{padding:0 16px 10px}
+.dce-page-edit .dce-properties{padding:16px}
+.dce-page-edit .dce-properties h2{font-size:15px;margin-bottom:16px}
+.dce-page-edit .dce-field{font-size:13px;gap:10px;margin:12px 0}
+.dce-page-edit .dce-properties input:not([type=color]):not([type=checkbox]),.dce-page-edit .dce-properties select,.dce-page-edit .dce-properties textarea{background:#272a31;border-color:#373b45;border-radius:5px;font-size:13px;padding:8px}
+.dce-page-edit .dce-properties select{min-height:34px}
+.dce-page-edit .dce-properties button{font-size:12px;min-height:32px;padding:6px 9px}
+.dce-page-edit .dce-properties .primary{background:#363c48;border-color:#4c5565;color:#f2f3f7}
+.dce-page-edit .dce-properties .primary:hover{background:#454d5d}
+.dce-page-edit .dce-property-group{margin-top:16px;padding-top:16px}
+.dce-page-edit .dce-properties details>summary{font-size:14px;font-weight:500;min-height:44px;color:var(--ink)}
+.dce-page-edit .dce-sticker-properties,.dce-page-edit .dce-narration-properties,.dce-page-edit .dce-audio-properties{margin-top:16px}
+.dce-page-edit .dce-panel-divider{background:#17191f}
+.dce-page-edit .dce-panel-divider:hover,.dce-page-edit .dce-panel-divider:focus-visible{background:#303b5b}
+.dce-page-edit .dce-timeline-tools{padding-left:14px;padding-right:14px}
+.dce-page-edit .dce-timeline-command-groups{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dce-page-edit .dce-timeline-command-groups>.dce-actions{gap:2px}
+.dce-page-edit .dce-timeline-command-groups>.dce-actions+.dce-actions{padding-left:12px;border-left:1px solid var(--line)}
+.dce-page-edit .dce-timeline-tools button{font-size:12px;padding:6px 9px;min-height:34px;border-radius:5px}
+.dce-page-edit .dce-timeline-tools button:disabled{opacity:.3}
+.dce-page-edit .dce-timeline-body{padding:0 14px 16px;grid-template-columns:94px minmax(0,1fr)}
+.dce-page-edit .dce-ruler-label,.dce-page-edit .dce-track-label{font-size:12px}
+.dce-page-edit .dce-track-label{gap:8px}
+.dce-page-edit .dce-track-label svg{width:16px;height:16px}
+.dce-page-edit .dce-track-block.sticker{background:#675183}
+.dce-page-edit .dce-track-block.voice{background:#2c6253}
+.dce-page-edit .dce-track-block.bgm{background:#384f77}
+@container (max-width:760px){.dce-page-edit .dce-timeline-command-groups{gap:4px}.dce-page-edit .dce-timeline-command-groups>.dce-actions+.dce-actions{padding-left:4px}.dce-page-edit .dce-editor-topline{height:auto}.dce-page-edit .dce-playback .dce-play{min-width:128px}.dce-page-edit .dce-timeline-body{grid-template-columns:76px minmax(0,1fr);padding:0 8px 14px}}

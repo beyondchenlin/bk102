@@ -50,7 +50,7 @@ public final class MaintenanceDataSnapshot {
             fs,
             rootfs,
             publicRoot,
-            List.of(new File(files, "user-data-v5"), new File(publicRoot, "Documents/dshdata")));
+            List.of(new File(files, "user-data-v5"), new File(publicRoot, "Documents/bk102data")));
   }
 
   public File archive() {

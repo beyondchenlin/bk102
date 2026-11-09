@@ -1,6 +1,8 @@
-# BK102
+# BK Harenss
 
-BK102 是由陈林维护的 [DSHA](https://github.com/DSH-APP/DSHA) 二次开发版本，使用独立的 BK102 品牌与签名。原项目及第三方组件的版权和许可保留，详见 [LICENSE](LICENSE) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+BK Harenss（仓库名 BK102）是由陈林维护的 [DSHA](https://github.com/DSH-APP/DSHA) 二次开发版本，使用独立品牌与签名。原项目及第三方组件的版权和许可保留，详见 [LICENSE](LICENSE) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+主开发分支为 `dev`；当前 [mobile25 开发里程碑](docs/product/milestone-mobile25-20261110.md) 汇总文案、剪辑、Android 原生媒体与手机布局工作。完整 ARM64 首启和运行时更新尚未验收，不能视为正式发布。`main` 保留上游基线。
 
 本分支尚未完成 ARM64 真机的运行时验收。以下内容为上游项目说明，其中发布包、支持渠道、版本和服务信息不代表 BK102 的独立承诺。
 

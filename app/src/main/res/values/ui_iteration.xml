@@ -2,7 +2,7 @@
 <resources>
     <string name="ui2_stopped">DSH 未运行</string>
     <string name="ui2_launch_hint">随时开始你的下一项任务。</string>
-    <string name="ui2_start">▶  启动 BK102</string>
+    <string name="ui2_start">▶  启动 BK Harenss</string>
     <string name="ui2_restart">↻  重启</string>
     <string name="ui2_stop">□  停止</string>
     <string name="ui2_port">实际 Web 端口</string>
@@ -25,7 +25,7 @@
     <string name="ui2_updates">版本更新</string>
     <string name="ui2_diagnostics">自检与诊断</string>
     <string name="ui2_diagnostics_sub">运行状态、错误记录与日志导出</string>
-    <string name="ui2_about">关于 BK102</string>
+    <string name="ui2_about">关于 BK Harenss</string>
     <string name="ui2_about_sub">版本、开源许可与反馈</string>
 
     <string name="ui2_community">社区插件生态</string>
@@ -59,7 +59,7 @@
     <string name="ui2_w2_2">设备操作</string>
     <string name="ui2_ws2_2">Root、Shizuku、ADB 与短信单独授权。</string>
     <string name="ui2_online_notice">使用在线模型时，消息及你选择的附件会发送到所配置的模型服务。</string>
-    <string name="ui2_meet">认识 BK102</string>
+    <string name="ui2_meet">认识 BK Harenss</string>
     <string name="ui2_skip">跳过介绍</string>
     <string name="ui2_updates_sub">稳定版与预览版更新</string>
     <string name="ui2_install_environment">安装与环境</string>

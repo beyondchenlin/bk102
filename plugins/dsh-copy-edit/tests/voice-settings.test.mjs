@@ -1,0 +1,27 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs/promises';import path from 'node:path';import {randomUUID} from 'node:crypto';
+import {ProjectStore} from '../src/store.mjs';import {compilePlan} from '../src/project.mjs';import {voiceSettingsView,changeVoiceSettings} from '../src/voice-settings.mjs';
+async function withStore(run){const base=path.resolve(import.meta.dirname,'../../../build/copy-edit-desktop/unit');await fs.mkdir(base,{recursive:true});const dir=await fs.mkdtemp(path.join(base,'voice-settings-'));let store;try{store=await new ProjectStore(dir).init();await run(store,dir);}finally{if(store)await store.close();await fs.rm(dir,{recursive:true,force:true});}}
+const request=(s,command)=>({expectedRevision:voiceSettingsView(s.state).revision,operationId:randomUUID(),command});
+const send=(s,command)=>s.write(state=>changeVoiceSettings(state,request(s,command)));
+test('配音配置旧库只读不迁移，无凭据或网络副作用',()=>withStore(async(s,dir)=>{await s.write(()=>{});const raw=await fs.readFile(path.join(dir,'state.json'));const view=voiceSettingsView(s.state);assert.equal(view.revision,0);assert.deepEqual(view.providers.company.voices,[]);view.providers.company.model='changed';assert.equal(voiceSettingsView(s.state).providers.company.model,'');assert.deepEqual(await fs.readFile(path.join(dir,'state.json')),raw);assert.equal(s.state.voiceSettings,undefined);}));
+test('公司与自有来源隔离，选择和参考音频重开保留，生成配置不改变成片',()=>withStore(async(s,dir)=>{
+ await s.write(state=>{state.assets.push({assetId:'video',kind:'video',sha256:'a'.repeat(64),ptsUs:[0,33333,66667],endUs:100000},{assetId:'reference',kind:'audio',bytes:4096,durationUs:2000000});});let p=s.view().projects[0];p=await s.mutate({projectId:p.projectId,expectedRevision:p.revision,operationId:randomUUID(),command:{type:'addClip',assetId:'video'}});const before=s.view(),plan=compilePlan(p,before.assets).planHash;
+ await send(s,{type:'saveProvider',source:'company',endpoint:'http://192.168.1.2:8000/tts',model:'internal-voice'});await send(s,{type:'saveProvider',source:'custom',endpoint:'https://example.invalid/speech',model:'my-model'});
+ await send(s,{type:'saveVoice',source:'company',voice:{voiceId:'sample-voice',name:'参考音色',remoteId:'',referenceAssetId:'reference'}});await send(s,{type:'selectVoice',source:'company',projectId:p.projectId,voiceId:'sample-voice',rate:1.25});
+ assert.deepEqual(s.view(),before);assert.equal(compilePlan(s.project(p.projectId),s.view().assets).planHash,plan);await s.close();s.closed=false;await s.init();const v=voiceSettingsView(s.state);assert.equal(v.providers.custom.model,'my-model');assert.equal(v.providers.company.voices[0].referenceAssetId,'reference');assert.equal(v.selections[p.projectId].rate,1.25);assert(!('operations'in v));
+}));
+test('拒绝地址中的密钥、未知字段与无效引用，失败保持原文件',()=>withStore(async(s,dir)=>{
+ await s.write(state=>state.assets.push({assetId:'image',kind:'image'},{assetId:'long',kind:'audio',durationUs:61000000,bytes:1}));const raw=await fs.readFile(path.join(dir,'state.json'));
+ for(const endpoint of ['file:///E:/test','javascript:alert(1)','https://user:secret@example.com','https://example.com?key=secret','https://example.com#token'])await assert.rejects(send(s,{type:'saveProvider',source:'company',endpoint,model:''}));
+ await assert.rejects(send(s,{type:'saveProvider',source:'custom',endpoint:'https://example.invalid',model:'',apiKey:'do-not-store'}));
+ for(const referenceAssetId of ['missing','image','long'])await assert.rejects(send(s,{type:'saveVoice',source:'company',voice:{voiceId:'test-voice',name:'音色',remoteId:'',referenceAssetId}}));
+ await assert.rejects(send(s,{type:'saveVoice',source:'__proto__',voice:{}}));await assert.rejects(send(s,{type:'selectVoice',source:'company',projectId:s.view().projects[0].projectId,voiceId:'missing',rate:1}));assert.deepEqual(await fs.readFile(path.join(dir,'state.json')),raw);
+}));
+test('配置重放幂等与修订冲突不覆盖其他写入',()=>withStore(async s=>{
+ const a=request(s,{type:'saveProvider',source:'company',endpoint:'https://one.invalid',model:'one'}),b=request(s,{type:'saveProvider',source:'custom',endpoint:'https://two.invalid',model:'two'});
+ const first=await s.write(state=>changeVoiceSettings(state,a));assert.deepEqual(await s.write(state=>changeVoiceSettings(state,a)),first);await assert.rejects(s.write(state=>changeVoiceSettings(state,b)),/已更新/);await assert.rejects(s.write(state=>changeVoiceSettings(state,{...a,command:{...a.command,model:'different'}})),/操作标识/);assert.equal(voiceSettingsView(s.state).revision,1);
+}));
+test('删除音色只清除配音配置引用，不删除音频、剪辑声音或其他来源',()=>withStore(async s=>{
+ const projectId=s.view().projects[0].projectId;await s.write(state=>state.assets.push({assetId:'reference',kind:'audio',durationUs:2000000,bytes:1}));const before=s.view();
+ await send(s,{type:'saveVoice',source:'company',voice:{voiceId:'company-voice',name:'默认音色',remoteId:'voice-1',referenceAssetId:'reference'}});await send(s,{type:'saveVoice',source:'custom',voice:{voiceId:'custom-voice',name:'默认音色',remoteId:'voice-2',referenceAssetId:null}});await send(s,{type:'selectVoice',source:'company',projectId,voiceId:'company-voice',rate:1});await send(s,{type:'deleteVoice',source:'company',voiceId:'company-voice'});assert.equal(voiceSettingsView(s.state).selections[projectId].voiceId,null);assert.equal(voiceSettingsView(s.state).providers.custom.voices.length,1);assert.deepEqual(s.view(),before);
+}));

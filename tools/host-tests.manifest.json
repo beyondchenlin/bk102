@@ -2512,6 +2512,16 @@
       "environment": {},
       "reason": "Actual production Java ManagedPatchChain/ExactTextPatch full chains: fresh, prepared-repeat, canonical fallback, exact 1817 upgrade and broken V1 rejection/recovery. Independent APK archive admission also available.",
       "cli": "--jdk PATH; optional --apk PATH for exact built APK; pinned upstream and historical worker source, no device data."
+    },
+    {
+      "path": "tools/test-mobile-panel-navigation.mjs",
+      "stage": "fast",
+      "requires": [
+        "node24"
+      ],
+      "args": [],
+      "timeoutSeconds": 30,
+      "reason": "移动插件系统返回逐层回退、旧浏览器能力和重复退出约束"
     }
   ],
   "historicalExcluded": [

@@ -1,0 +1,18 @@
+plugins { id 'com.android.library' }
+android {
+    namespace 'com.deepseekharness.media'
+    compileSdk 37
+    defaultConfig { minSdk 30 }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+dependencies {
+    implementation 'androidx.webkit:webkit:1.15.0'
+    implementation 'androidx.core:core:1.9.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime:2.6.1'
+    implementation 'androidx.annotation:annotation-jvm:1.9.1'
+    api 'androidx.media3:media3-transformer:1.11.1'
+    api 'androidx.media3:media3-effect:1.11.1'
+    api 'androidx.media3:media3-exoplayer:1.11.1'
+    testImplementation 'junit:junit:4.13.2'
+}
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }

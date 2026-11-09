@@ -652,6 +652,7 @@
     "tools/mobile-server/delete-session.js",
     "tools/mobile-server/index.js",
     "tools/apply-mobile-client-patches.mjs",
+    "tools/mobile-panel-navigation.mjs",
     "tools/generate-builtin-plugins.py",
     "tools/generate-credential-paths.py",
     "tools/prepare-runtime-tools.py",

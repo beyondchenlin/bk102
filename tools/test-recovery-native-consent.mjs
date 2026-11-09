@@ -40,6 +40,7 @@ script.runInThisContext()(name => name === 'node:fs' ? {
 const sdk = exports.exports;
 const query = async () => {
   const connection = sdk.readConnection();
+  assert.equal(connection.applicationId, 'io.github.beyondchenlin.bk102');
   const response = await sdk.bridgeFetch('/device/consent', { expectedConnectionGeneration: connection.generation,
     signal: AbortSignal.timeout(2000) });
   return JSON.parse((await response.json()).result);

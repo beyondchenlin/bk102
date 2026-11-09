@@ -7,11 +7,11 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 
-/** 关于对话框：GitHub 仓库 / QQ 交流群入口（欢迎页 + 设置页 + 顶栏共用）。 */
+/** 关于对话框：GitHub 仓库 / 交流邮箱入口（欢迎页 + 设置页 + 顶栏共用）。 */
 public final class AboutDialog {
 
   public static final String GITHUB_URL = com.deepseekharness.app.util.Constants.REPOSITORY_URL;
-  public static final String QQ_GROUP = "975836806";
+  public static final String CONTACT_EMAIL = "beyond.chenlin@gmail.com";
 
   private AboutDialog() {}
 
@@ -25,13 +25,13 @@ public final class AboutDialog {
         android.view.LayoutInflater.from(ctx)
             .inflate(com.deepseekharness.app.R.layout.dialog_about, null);
     ((android.widget.TextView) content.findViewById(com.deepseekharness.app.R.id.about_version))
-        .setText(com.deepseekharness.app.util.UiText.format("BK102 v%s", version));
+        .setText(com.deepseekharness.app.util.UiText.format("BK Harenss v%s", version));
     android.widget.TextView repository =
         content.findViewById(com.deepseekharness.app.R.id.about_repository);
     repository.setText(Uri.parse(GITHUB_URL).getPath().substring(1));
     android.widget.TextView community =
         content.findViewById(com.deepseekharness.app.R.id.about_community);
-    community.setText(QQ_GROUP);
+    community.setText(CONTACT_EMAIL);
     AlertDialog dialog = new DshaDialogBuilder(ctx).setView(content).create();
     content
         .findViewById(com.deepseekharness.app.R.id.about_close)
@@ -41,7 +41,7 @@ public final class AboutDialog {
         .setOnClickListener(v -> openBrowser(ctx, GITHUB_URL));
     content
         .findViewById(com.deepseekharness.app.R.id.about_qq)
-        .setOnClickListener(v -> openQQGroup(ctx));
+        .setOnClickListener(v -> openContactEmail(ctx));
     dialog.show();
     return dialog;
   }
@@ -59,22 +59,20 @@ public final class AboutDialog {
     }
   }
 
-  public static void openQQGroup(Context ctx) {
+  public static void openContactEmail(Context ctx) {
     try {
       ctx.startActivity(
-          new Intent(
-                  Intent.ACTION_VIEW,
-                  Uri.parse(
-                      "mqqapi://card/show_pslcard?src_type=internal&version=1"
-                          + "&uin="
-                          + QQ_GROUP
-                          + "&card_type=group"))
+          new Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:" + CONTACT_EMAIL))
               .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     } catch (Exception e) {
       Toast.makeText(
               ctx,
-              com.deepseekharness.app.util.UiText.format("打不开 QQ，请手动搜索群号：%s", QQ_GROUP),
-              Toast.LENGTH_SHORT)
+              String.format(
+                  java.util.Locale.ROOT,
+                  com.deepseekharness.app.util.UiText.choose(
+                      "未找到邮件应用，请发送邮件至 %s", "No email app found. Email %s"),
+                  CONTACT_EMAIL),
+              Toast.LENGTH_LONG)
           .show();
     }
   }

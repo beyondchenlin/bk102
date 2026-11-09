@@ -1,0 +1,5 @@
+plugins {
+    id 'com.android.application' version '9.1.1' apply false
+}
+// 与生产项目复用同一源码和依赖缓存，隔离可写构建输出，避免两个Gradle根互相覆盖。
+project(':copy-edit-media').layout.buildDirectory.set(layout.buildDirectory.dir('shared-media'))

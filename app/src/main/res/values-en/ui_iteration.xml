@@ -2,7 +2,7 @@
 <resources>
     <string name="ui2_stopped">DSH is not running</string>
     <string name="ui2_launch_hint">Ready for your next task.</string>
-    <string name="ui2_start">▶  Start BK102</string>
+    <string name="ui2_start">▶  Start BK Harenss</string>
     <string name="ui2_restart">↻  Restart</string>
     <string name="ui2_stop">□  Stop</string>
     <string name="ui2_port">Active Web port</string>
@@ -25,7 +25,7 @@
     <string name="ui2_updates">App updates</string>
     <string name="ui2_diagnostics">Diagnostics</string>
     <string name="ui2_diagnostics_sub">Runtime checks and diagnostic logs</string>
-    <string name="ui2_about">About BK102</string>
+    <string name="ui2_about">About BK Harenss</string>
     <string name="ui2_about_sub">Version, licenses and feedback</string>
 
     <string name="ui2_community">Community plugins</string>
@@ -59,7 +59,7 @@
     <string name="ui2_w2_2">Device actions</string>
     <string name="ui2_ws2_2">Root, Shizuku, ADB and SMS have separate permissions.</string>
     <string name="ui2_online_notice">Online models receive the messages and attachments you choose to send.</string>
-    <string name="ui2_meet">Discover BK102</string>
+    <string name="ui2_meet">Discover BK Harenss</string>
     <string name="ui2_skip">Skip introduction</string>
     <string name="ui2_updates_sub">Stable and preview releases</string>
     <string name="ui2_install_environment">Installation and runtime</string>

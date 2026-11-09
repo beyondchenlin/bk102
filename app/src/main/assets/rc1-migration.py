@@ -85,8 +85,8 @@ class Resolver:
                     visited.add(key); target = os.readlink(cursor)
                     links.append({'path':key, 'target':target})
                     # 历史 Android 公开路径使用本次显式映射，不接受任意 /data 别名。
-                    if target.startswith('/storage/emulated/0/Documents/dshdata'):
-                        target = '/sdcard/Documents/dshdata' + target[len('/storage/emulated/0/Documents/dshdata'):]
+                    if target.startswith('/storage/emulated/0/Documents/bk102data'):
+                        target = '/sdcard/Documents/bk102data' + target[len('/storage/emulated/0/Documents/bk102data'):]
                     path = os.path.abspath(os.path.join(str(cursor.parent), target, *parts[index+1:]))
                     followed = True; break
             if not followed: return Path(path), links

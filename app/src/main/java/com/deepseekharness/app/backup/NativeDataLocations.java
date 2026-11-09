@@ -54,7 +54,7 @@ public final class NativeDataLocations {
     files = context.getFilesDir().getCanonicalFile();
     rootfs = com.deepseekharness.app.util.GuestPaths.rootfs(files);
     publicStorage = Environment.getExternalStorageDirectory().getCanonicalFile();
-    publicData = new File(publicStorage, "Documents/dshdata");
+    publicData = new File(publicStorage, "Documents/bk102data");
     resolver =
         new GuestDataResolver(
             fs, rootfs, publicStorage, Arrays.asList(new File(files, "user-data-v5"), publicData));

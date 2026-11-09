@@ -200,7 +200,8 @@ public final class LogPanelAudit extends Instrumentation {
       check(
           intents.size() == 2
               && AboutDialog.GITHUB_URL.equals(intents.get(0).getDataString())
-              && intents.get(1).getDataString().contains(AboutDialog.QQ_GROUP),
+              && ("mailto:" + AboutDialog.CONTACT_EMAIL).equals(intents.get(1).getDataString())
+              && Intent.ACTION_SENDTO.equals(intents.get(1).getAction()),
           "链接卡片没有打开原入口");
       screenshot(root, prefix + "-about");
       ui(close::performClick);

@@ -2,7 +2,7 @@
 
 <resources>
 
-    <string name="app_name" translatable="false">BK102</string>
+    <string name="app_name" translatable="false">BK Harenss</string>
 
 
 
@@ -16,6 +16,6 @@
 
 
 
-BK102 不做任何后台屏幕记录：读屏只发生在助手明确请求的那一刻，读屏文字和 MCP 截图返回本次对话；普通截图按请求保存到应用私有截图目录。BK102 不会单独自动上传截图，模型/插件对返回结果的处理由当前配置决定；配对码只在你点过「自动读配对码」后的两分钟内读取。</string>
+BK Harenss 不做任何后台屏幕记录：读屏只发生在助手明确请求的那一刻，读屏文字和 MCP 截图返回本次对话；普通截图按请求保存到应用私有截图目录。BK Harenss 不会单独自动上传截图，模型/插件对返回结果的处理由当前配置决定；配对码只在你点过「自动读配对码」后的两分钟内读取。</string>
 
 </resources>

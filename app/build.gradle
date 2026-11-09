@@ -47,7 +47,7 @@ android {
     ndkVersion '26.3.11579264'
 
     defaultConfig {
-        applicationId "dsh.android.client"
+        applicationId "io.github.beyondchenlin.bk102"
         minSdk 30
         targetSdk 37
         buildConfigField 'String', 'BUNDLED_PNPM_VERSION', '"' + bundledTools.pnpm.version + '"'
@@ -339,10 +339,18 @@ def verifyBackupDependencies = tasks.register("verifyBackupDependencies") {
             hash.digest().encodeHex().toString()
         }
         ["standardReleaseRuntimeClasspath", "lowReleaseRuntimeClasspath"].each { name ->
-            def resolved = configurations.getByName(name).resolvedConfiguration.resolvedArtifacts
+            // 仅解析本门禁核验的三个外部JAR；Android项目模块有多个secondary artifact变体。
+            // 仍从实际运行时依赖图选版本，不能另建脱离宿主依赖解析的配置。
+            def resolved = configurations.getByName(name).incoming.artifactView {
+                componentFilter { component ->
+                    component instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier &&
+                            requiredCoordinates.contains(component.group + ":" + component.module)
+                }
+                attributes { attribute(org.gradle.api.artifacts.type.ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, "jar") }
+            }.artifacts.artifacts
             lock.dependencies.each { expected ->
-                def selected = resolved.findAll { it.moduleVersion.id.group == expected.group && it.name == expected.name }
-                if (selected.size() != 1 || selected[0].moduleVersion.id.version != expected.version)
+                def selected = resolved.findAll { it.id.componentIdentifier.group == expected.group && it.id.componentIdentifier.module == expected.name }
+                if (selected.size() != 1 || selected[0].id.componentIdentifier.version != expected.version)
                     throw new GradleException("备份依赖版本未锁定：${expected.group}:${expected.name}")
                 if (fileDigest(selected[0].file) != expected.sha256)
                     throw new GradleException("备份依赖摘要不符：${expected.name}")
@@ -368,6 +376,8 @@ def prepareUiLanguages = tasks.register("prepareUiLanguages", Exec) {
 tasks.named("preBuild").configure { dependsOn(prepareUiLanguages) }
 
 dependencies {
+    // 原生媒体独立模块只进入Standard；Low与既有启动/备份链不加载Media3。
+    standardImplementation project(':copy-edit-media')
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
     lowImplementation 'org.mozilla.geckoview:geckoview-arm64-v8a:143.0.20251003115653'
     implementation 'androidx.appcompat:appcompat:1.6.1'

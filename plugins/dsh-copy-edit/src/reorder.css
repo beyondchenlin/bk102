@@ -1,0 +1,8 @@
+.dce .dce-clip-body{cursor:grab;user-select:none;-webkit-user-drag:none}.dce-clip-body img{pointer-events:none;-webkit-user-drag:none}
+.dce-timeline.is-reordering,.dce-timeline.is-reordering .dce-clip-body{cursor:grabbing;user-select:none}
+.dce .dce-clip.is-reordering{opacity:.38}.dce-timeline.is-reordering .dce-trim-handle{visibility:hidden}
+.dce-reorder-marker{position:absolute;top:0;bottom:0;width:3px;background:#a8bdff;z-index:12;pointer-events:none;transform:translateX(-1px)}
+.dce-reorder-marker:before,.dce-reorder-marker:after{content:'';position:absolute;width:9px;height:3px;left:-3px;background:inherit}.dce-reorder-marker:before{top:0}.dce-reorder-marker:after{bottom:0}
+.dce-reorder-ghost{position:absolute;top:5px;bottom:5px;padding:5px 12px;display:flex;align-items:center;gap:8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border:2px solid #a8bdff;border-radius:5px;background:#303b5be6;color:#f2f3f5;z-index:11;pointer-events:none;font-size:12px}
+.dce-reorder-ghost[data-valid=false]{opacity:.45;border-style:dashed}
+@container (max-width:760px){.dce .dce-clip-body{cursor:pointer}}
