@@ -11,6 +11,7 @@ import { voiceSettingsView, changeVoiceSettings } from './voice-settings.mjs';
 import { compilePlan } from './project.mjs';
 import { freezeNativePlan } from './native-media.mjs';
 import { NativeImports } from './native-imports.mjs';
+import { DraftImports } from './draft-import.mjs';
 
 export const name = 'copy-edit';
 export const inject = ['tools', 'connection'];
@@ -20,21 +21,25 @@ export class CopyEditService extends TypertRemoteService {
   store: ProjectStore;
   media: DesktopMedia;
   nativeImports: NativeImports;
+  draftImports: DraftImports;
   ready: Promise<void>;
   constructor(ctx: Context) {
     super(ctx, 'copyEdit', { namespace: 'copyEdit' });
     this.store = new ProjectStore(path.join(resolveDshHome(), 'copy-edit'));
     this.media = new DesktopMedia(this.store);
     this.nativeImports = new NativeImports(this.store);
+    this.draftImports = new DraftImports(this.store);
     this.ready = this.store.init().then(async () => { await this.media.init(); await this.nativeImports.init(); });
     // 注册随插件撤销，媒体仅使用 DSH 已鉴权的传输，不新增监听端口。
     for (const [route, methods, streaming] of [
-      ['upload', ['POST'], true], ['media', ['GET', 'HEAD'], false], ['frame', ['GET'], false], ['native-upload', ['POST'], true], ['native-import', ['GET'], false]
+      ['upload', ['POST'], true], ['media', ['GET', 'HEAD'], false], ['frame', ['GET'], false], ['native-upload', ['POST'], true], ['native-import', ['GET'], false],
+      ['draft/capabilities', ['GET'], false], ['draft/prepare', ['POST'], true], ['draft/commit', ['POST'], true], ['draft/receipt', ['GET'], false]
     ] as const) ctx.effect(() => ctx.connection.fetch.register({
       path: '/api/copy-edit/' + route, methods, requestBody: streaming ? 'streaming' : 'buffered',
       fetch: async (request: Request) => {
         try {
           await this.ready;
+          if (route.startsWith('draft/')) return await this.draftImports.response(request);
           const url = new URL(request.url);
           if (route === 'native-upload') {
             if (request.headers.get('content-type') !== 'application/octet-stream') return new Response(null, {status: 415});

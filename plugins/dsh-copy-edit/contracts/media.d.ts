@@ -31,6 +31,8 @@ export interface ProjectSnapshot {
   schemaVersion: 2; projectId: string; revision: number; title: string; text: string;
   /** 新建或成功编辑的真实时间；旧工程允许缺失，不在读取时补写。 */
   updatedAt?: string;
+  /** 草案来源与偏差；有pendingGaps时禁止将压缩时间线输出为完整成片。 */
+  draftImport?: {schemaVersion:1;draftId:string;revision:number;warnings:{clipId:string;message:string}[];pendingGaps:{gapId:string;startFrame:number;frames:number;text:string;reason:string}[]};
   versions: {version: number; title: string; text: string; savedAt: string}[];
   canvas: {width: 1080; height: 1920; fps: {numerator: 30; denominator: 1}};
   trackOrder: ['sticker','subtitle','overlay','video','voice','bgm'];

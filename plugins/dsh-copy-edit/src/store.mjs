@@ -51,9 +51,11 @@ export class ProjectStore {
       if(this.closed)throw Error('插件已关闭');
       const next=structuredClone(this.state),answer=await action(next);
       const temp=path.join(this.root,'incoming',id()+'.json');
-      const f=await fs.open(temp,'wx');
-      try {await f.writeFile(JSON.stringify(next));await f.sync();}finally{await f.close();}
-      try {await fs.rename(temp,path.join(this.root,'state.json'));this.state=next;return structuredClone(answer);}
+      try {
+        const f=await fs.open(temp,'wx');
+        try {await f.writeFile(JSON.stringify(next));await f.sync();}finally{await f.close();}
+        await fs.rename(temp,path.join(this.root,'state.json'));this.state=next;return structuredClone(answer);
+      }
       finally {await fs.rm(temp,{force:true});}
     });
     this.chain=run.catch(()=>{});return run;

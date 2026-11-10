@@ -66,6 +66,7 @@ export function validateNarration(n,project,assets) {
   }
 }
 export function compilePlan(project, assets, profile='export') {
+  if(project.draftImport?.pendingGaps?.length)throw Error('工程仍有待补素材，请先完成草案选片');
   if (project.schemaVersion!==2 || !['preview','export'].includes(profile)) throw Error('不支持的工程或输出格式');
   if (!project.clips.length) throw Error('请先添加视频镜头');
   integer(project.clips.length,1,120,'镜头数量');
