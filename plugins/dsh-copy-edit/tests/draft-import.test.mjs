@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {ProjectStore} from '../src/store.mjs';
-import {DraftImports,sourceRange,draftHash} from '../src/draft-import.mjs';
+import {DraftImports,sourceRange,mapSourceRange,draftHash} from '../src/draft-import.mjs';
 import {compilePlan} from '../src/project.mjs';
 
 const hash=b=>createHash('sha256').update(b).digest('hex');
@@ -65,6 +65,23 @@ test('真实VFR范围精确映射；不以平均帧率猜测或接受非帧边�
   assert.deepEqual(sourceRange(a,50000,150000),{inFrame:2,outFrame:4});
   for(const pair of [[1,116667],[0,150001],[50000,16667]])assert.throws(()=>sourceRange(a,...pair));
 });
+
+test('映射仅使用真实帧边界，保留用户时长；无解时明确失败',()=>{
+  const a={ptsUs:[0,16667,50000,116667,150000,200000],endUs:250000};
+  assert.deepEqual(mapSourceRange(a,10000,150000,3),{inUs:16667,outUs:116667,inFrame:1,outFrame:3,frames:3});
+  assert.throws(()=>mapSourceRange(a,10000,90000,3),code('NO_EXACT_SOURCE_RANGE'));
+  assert.deepEqual(mapSourceRange(a,0,250001,6),{inUs:0,outUs:200000,inFrame:0,outFrame:5,frames:6});
+  assert.throws(()=>mapSourceRange({...a,ptsUs:[0,50000,50000]},0,150000,3),code('INVALID_ASSET_INDEX'));
+});
+
+test('映射检查库身份及已登记媒体字节，不接受调用者的帧索引',async()=>fixture(async f=>{
+  const a=f.assets[0],request={workspaceId:f.store.workspaceId,assetId:a.assetId,sha256:a.sha256,bytes:a.bytes,startUs:0,endUs:500000,frames:15};
+  assert.deepEqual(await f.imports.mapSource(request),{inUs:0,outUs:500000,inFrame:0,outFrame:5,frames:15});
+  await assert.rejects(f.imports.mapSource({...request,workspaceId:'other'}),code('WORKSPACE_MISMATCH'));
+  await assert.rejects(f.imports.mapSource({...request,ptsUs:[0,500000]}),code('UNKNOWN_FIELD'));
+  await fs.writeFile(path.join(f.root,'assets',a.sha256),Buffer.alloc(a.bytes));
+  await assert.rejects(f.imports.mapSource(request),code('ASSET_CHANGED'));
+}));
 
 test('VFR裁切回执明确给出实际入出点和工程帧量化误差',async()=>fixture(async f=>{
   const r=f.request();r.plan.clips[0].inUs=33333;r.plan.clips[0].outUs=300000;r.plan.voices[0].outUs=266667;

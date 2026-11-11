@@ -9,6 +9,7 @@ function homeDate(value){
   return today?'今天 '+d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false}):d.toLocaleDateString('zh-CN',{...(d.getFullYear()!==now.getFullYear()?{year:'numeric'}:{}),month:'numeric',day:'numeric'});
 }
 function HomeWorkspace({workspace,open,create,busy,views,setViews,memory,perform,notice,categoryAction,refresh,drafts}){
+  const [selectionImport,setSelectionImport]=useState(false);
   const [query,setQuery]=useState(memory.current.query||''),scroll=useRef(null);
   const library=workspace.library,[filters,setFilters]=useState(categoryFilters),[categoryDialog,setCategoryDialog]=useState(null);
   const [selection,setSelection]=useState({copy:null,edit:null});
@@ -58,5 +59,5 @@ function HomeWorkspace({workspace,open,create,busy,views,setViews,memory,perform
       h('div',{className:'dce-home-items is-'+mode},mode==='list'&&h('div',{className:'dce-home-list-heading '+(kind==='copy'?'is-copy':'is-edit'),'aria-hidden':true},h('span',null,'文案首句'),kind==='copy'&&h('span',null,'后续内容'),h('span',null,kind==='copy'?'版本':'时长'),h('span',null,'更新')), ...entries.map(p=>item(p,kind,mode))));
   };
   return h('div',{className:'dce-home',ref:scroll,onScroll:e=>{memory.current.scrollTop=e.currentTarget.scrollTop;}},
-    h('div',{className:'dce-home-topline'},h('h1',null,'文案剪辑'),h('label',{className:'dce-search'},icon('search',18),h('input',{type:'search','aria-label':'搜索文案或工程',placeholder:'搜索文案或工程',value:query,onChange:e=>search(e.target.value)}))),section('copy'),section('edit'),categoryDialog&&h(CategoryDialog,{...categoryDialog,library,onAction:categoryAction,onRefresh:refresh,onClose:()=>setCategoryDialog(null),onAssigned:()=>{if(categoryDialog.projectIds){setSelection(current=>({...current,[categoryDialog.kind]:null}));notice('已更新 '+categoryDialog.projectIds.length+' 项分类');}}}));
+    h('div',{className:'dce-home-topline'},h('h1',null,'文案剪辑'),h('label',{className:'dce-search'},icon('search',18),h('input',{type:'search','aria-label':'搜索文案或工程',placeholder:'搜索文案或工程',value:query,onChange:e=>search(e.target.value)})),button('导入选片',()=>setSelectionImport(true),{disabled:busy})),section('copy'),section('edit'),selectionImport&&h(SelectionImport,{workspace,onClose:()=>setSelectionImport(false),onImported:async receipt=>{await refresh();setSelectionImport(false);open(receipt.projectId,'edit');}}),categoryDialog&&h(CategoryDialog,{...categoryDialog,library,onAction:categoryAction,onRefresh:refresh,onClose:()=>setCategoryDialog(null),onAssigned:()=>{if(categoryDialog.projectIds){setSelection(current=>({...current,[categoryDialog.kind]:null}));notice('已更新 '+categoryDialog.projectIds.length+' 项分类');}}}));
 }

@@ -156,9 +156,9 @@ export function editProject(original, command, assets) {
       const old=validateClip(c,assets),range=sourceInterval(c,old);
       const budget=clipWindow(c,old).frames;
       const a=assetOf(assets,command.assetId,'video');
-      // 帧号只属于其源素材。按原镜头的输出时长选择新源出点，避免裁切入点
-      // 或不同帧率让替换后的镜头突然变长；不足时使用新源的完整长度。
+      // 素材库导入的文案计划不能静默缩短；旧工程保留原有裁切语义。
       const length=n=>outputFrames((n===a.ptsUs.length?a.endUs:a.ptsUs[n])-a.ptsUs[0]);
+      if(p.draftImport&&length(a.ptsUs.length)<budget)throw Error('替换素材时长不足，原镜头已保留');
       const frames=Math.min(budget,length(a.ptsUs.length));
       let lo=1,hi=a.ptsUs.length;
       while(lo<hi){const mid=Math.floor((lo+hi)/2),us=(mid===a.ptsUs.length?a.endUs:a.ptsUs[mid])-a.ptsUs[0];if(us>=frames*1e6/30-1)hi=mid;else lo=mid+1;}

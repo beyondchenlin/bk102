@@ -6,6 +6,7 @@ execFileSync(process.execPath,[path.join(root,'node_modules/typescript/bin/tsc')
 const trim=fs.readFileSync(path.join(root,'src/trim.cjs'),'utf8');
 const preview=fs.readFileSync(path.join(root,'src/preview.cjs'),'utf8');
 const body=fs.readFileSync(path.join(root,'src/client.cjs'),'utf8')
+  .replace('__COPY_EDIT_SELECTION_IMPORT__',fs.readFileSync(path.join(root,'src/selection-import.mjs'),'utf8').replaceAll('export function ','function ').replaceAll('export async function ','async function ')+'\n'+fs.readFileSync(path.join(root,'src/selection-import.cjs'),'utf8'))
   .replace('__COPY_EDIT_COPY_LABEL__',fs.readFileSync(path.join(root,'src/copy-label.mjs'),'utf8').replaceAll('export function ','function '))
   .replace('__COPY_EDIT_NATIVE_CLIENT__',fs.readFileSync(path.join(root,'src/native-client.mjs'),'utf8').replaceAll('export function ','function ').replaceAll('export async function ','async function '))
   .replace('__COPY_EDIT_NATIVE_PREVIEW__',fs.readFileSync(path.join(root,'src/native-preview.mjs'),'utf8').replaceAll('export function ','function '))

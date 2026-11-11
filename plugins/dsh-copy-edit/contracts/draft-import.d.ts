@@ -14,6 +14,8 @@ export interface DraftPlan {
 }
 export interface DraftPrepare {workspaceId:string;operationId:string;plan:DraftPlan}
 export interface DraftCommit {workspaceId:string;operationId:string;ticketId:string;planHash:string}
+export interface DraftSourceMapRequest {workspaceId:string;assetId:string;sha256:string;bytes:number;startUs:number;endUs:number;frames:number}
+export interface DraftSourceMap {inUs:number;outUs:number;inFrame:number;outFrame:number;frames:number}
 export interface DraftTicket extends DraftCommit {status:'prepared';expiresAt:number}
 export interface DraftSourceRange extends DraftClip {inFrame:number;outFrame:number;frames:number;roundingDeltaNumeratorUs:number;roundingDeltaDenominator:30}
 export interface DraftReceipt extends DraftCommit {status:'committed';projectId:string;revision:number;capabilities:DraftCapabilities;assetMap:Record<string,string>;sourceRanges:DraftSourceRange[];warnings:DraftWarning[];gaps:DraftGap[]}
@@ -23,9 +25,12 @@ export interface DraftCapabilities {
   maxDurationFrames:1800;maxAssets:64;maxPlanBytes:number;maxRequestBytes:number;
   maxActivePreparations:16;maxReservedOperations:256;mode:'new-candidate';
 }
-/** POST /api/copy-edit/draft/prepare、commit；GET capabilities、receipt。
+/** POST /api/copy-edit/draft/prepare、commit、map-source；GET capabilities、receipt。
  * 返回 {ok:true,value:...} 或 {ok:false,error:{code,field?}}。
  * receipt查询必须携带workspaceId与operationId，not_committed不等于允许更换输入。
  * 同操作同内容重放；同操作不同内容冲突。票据15分钟有效；提交回执不随编辑操作轮换。
  * 新候选导入不写入现有工程。源范围为真实PTS半开区间，不接受平均帧率推算。
+ * map-source 使用已登记文件的真实索引，范围内按最早可用入点、最早可用出点匹配指定工程帧数；
+ * 找不到则返回 NO_EXACT_SOURCE_RANGE。返回的实际入出点需与原计划比较并展示差异；
+ * 此接口不验证素材库来源授权，prepare/commit 仍重新核验文件和索引。
  */

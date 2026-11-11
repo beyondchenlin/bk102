@@ -48,9 +48,9 @@ async function rpc(name,args={},options={}){
   const body=await response.json();if(!body.result?.ok)throw Error(body.result?.error?.message||'操作未完成，请重新载入');return body.result.value;
 }
 let nativeMediaRuntime=null,sourceFrameQueue=Promise.resolve();
-async function upload(file){
-  if(nativeMediaRuntime?.caps.assetImport){const provider=nativeMediaRuntime;const response=await fetch('/api/copy-edit/native-upload?name='+encodeURIComponent(file.name||'贴片.png'),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream'},body:file});const body=await response.json();if(!response.ok||!body.ok)throw Error(body.error||'素材导入失败');try{return await provider.client.call('import',{importId:body.pending.assetId});}finally{await rpc('nativeImportDrop',{importId:body.pending.assetId}).catch(()=>{});}}
-  const response=await fetch('/api/copy-edit/upload?name='+encodeURIComponent(file.name||'贴片.png'),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream'},body:file});
+async function upload(file,signal){
+  if(nativeMediaRuntime?.caps.assetImport){const provider=nativeMediaRuntime;const response=await fetch('/api/copy-edit/native-upload?name='+encodeURIComponent(file.name||'贴片.png'),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream'},body:file,signal});const body=await response.json();if(!response.ok||!body.ok)throw Error(body.error||'素材导入失败');try{if(signal?.aborted)throw Error('素材导入已取消');return await provider.client.call('import',{importId:body.pending.assetId});}finally{await rpc('nativeImportDrop',{importId:body.pending.assetId}).catch(()=>{});}}
+  const response=await fetch('/api/copy-edit/upload?name='+encodeURIComponent(file.name||'贴片.png'),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream'},body:file,signal});
   const body=await response.json();if(!response.ok||!body.ok)throw Error(body.error||'素材导入失败');return body.asset;
 }
 // 缩略图串行请求，给逐帧预览保留解码槽；最多保留 64 张小图。
@@ -77,6 +77,7 @@ function Thumb({asset,frame=0}){
   return h('div',{className:'dce-thumb',ref},url?h('img',{src:url,alt:''}):icon('film',26));
 }
 __COPY_EDIT_CATEGORIES__
+__COPY_EDIT_SELECTION_IMPORT__
 __COPY_EDIT_HOME__
 __COPY_EDIT_STICKER_TIME__
 __COPY_EDIT_AUDIO_TIMING__
@@ -329,6 +330,7 @@ function EditPage({p,displayName,assets,results,history,edit,perform,busy,job,st
   const properties=selectedTrack==='bgm'?h('aside',{className:'dce-properties','aria-label':'音乐属性'},chosenMusic?h(MusicTimelineProperties,{key:chosenMusic.musicId+':'+p.revision,music:chosenMusic,totalFrames,edit,perform,disabled}):h('h2',null,'音乐')):selectedTrack==='voice'?h('aside',{className:'dce-properties','aria-label':'配音属性'},h(VoiceTimelineProperties,{voices,selected:chosenVoice?.voiceId,onSelect:setSelectedVoice,edit,perform,disabled})):videoProperties;
   const duration=draft?.axisSeconds||timelineSeconds(total),width=100*zoom,head=Math.min(100,position/duration*100);
   const timeline=h('div',{className:'dce-timeline'+(reorder.draft?' is-reordering':''),'aria-label':'工程轨道','data-touch-reorder':touchReorder},
+    !!(p.draftImport?.warnings?.length||p.draftImport?.pendingGaps?.length)&&h('details',{className:'dce-import-warnings'},h('summary',null,'选片提醒 '+((p.draftImport.warnings?.length||0)+(p.draftImport.pendingGaps?.length||0))),h('p',null,'以下为导入时的提示；替换画面后请重新核对。'),...(p.draftImport.warnings||[]).map((w,i)=>h('p',{key:'w'+i},w.message)),...(p.draftImport.pendingGaps||[]).map((g,i)=>h('p',{key:'g'+i},'待补画面：'+g.text+'（'+(g.frames/30).toFixed(2)+' 秒）'))),
     h('div',{className:'dce-timeline-tools'},
       h('div',{className:'dce-mobile-commands'},
         action('undo','撤销',()=>historyAction('undo'),{disabled:disabled||!history?.canUndo}),action('redo','重做',()=>historyAction('redo'),{disabled:disabled||!history?.canRedo}),

@@ -22,7 +22,10 @@ test('构建后的实际插件注册草案入口并随生命周期撤销，准�
     const body=await response.json();assert.equal(response.status,200,JSON.stringify(body));assert.equal(body.ok,true);return body.value;
   }
   try{
-    await open();const caps=await call('capabilities');assert(caps.features.includes('draft.atomic.v1'));
+    await open();const caps=await call('capabilities');assert(caps.features.includes('draft.atomic.v1'));assert(caps.features.includes('source.mapping.v1'));
+    assert.equal(routes.get('/api/copy-edit/draft/map-source').requestBody,'streaming');
+    const missing=await routes.get('/api/copy-edit/draft/map-source').fetch(new Request('http://isolated/api/copy-edit/draft/map-source',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workspaceId:caps.workspaceId,assetId:'missing',sha256:'0'.repeat(64),bytes:1,startUs:0,endUs:1000000,frames:30})}));
+    assert.equal(missing.status,409);assert.equal((await missing.json()).error.code,'ASSET_NOT_READY');
     const plan={schemaVersion:1,draftId:'entry-check',revision:1,requiredCapabilities:['gaps.persist.v1'],canvas:caps.canvas,text:'未匹配句子完整保留',assets:[],clips:[],stickers:[],voices:[],music:[],warnings:[],gaps:[{gapId:'missing',startFrame:0,frames:900,text:'未匹配句子完整保留',reason:'隔离无素材样例'}]};
     const ticket=await call('prepare',{workspaceId:caps.workspaceId,operationId:randomUUID(),plan});
     const commit={workspaceId:ticket.workspaceId,operationId:ticket.operationId,ticketId:ticket.ticketId,planHash:ticket.planHash};

@@ -4,7 +4,7 @@ import path from 'node:path';
 import {createHash, randomUUID} from 'node:crypto';
 import {newProject, compilePlan, outputFrames} from './project.mjs';
 
-const FEATURES=['draft.atomic.v1','tracks.four.v1','source.pts.v1','gaps.persist.v1'];
+const FEATURES=['draft.atomic.v1','tracks.four.v1','source.pts.v1','gaps.persist.v1','source.mapping.v1'];
 const MAX_BYTES=256*1024, MAX_REQUEST_BYTES=MAX_BYTES+4096, TTL_MS=15*60*1000;
 export class DraftImportError extends Error {
   constructor(code, field='') { super(`草案导入失败：${code}${field?'（'+field+'）':''}`);this.code=code;this.field=field; }
@@ -42,6 +42,24 @@ export function sourceRange(asset,inUs,outUs){
   const inFrame=pts.indexOf(inUs),outFrame=outUs===asset.endUs?pts.length:pts.indexOf(outUs);
   if(inFrame<0||outFrame<=inFrame)fail('RANGE_NOT_ON_FRAME');
   return {inFrame,outFrame};
+}
+
+/** 只在请求的镜头范围内寻找实际边界，保持用户指定的工程帧数；来源授权由素材库核验。 */
+export function mapSourceRange(asset,startUs,endUs,frames){
+  integer(startUs,0,600000000,'startUs');integer(endUs,startUs+1,600000000,'endUs');
+  integer(frames,1,1800,'frames');
+  if(!Array.isArray(asset.ptsUs)||!asset.ptsUs.length)fail('INVALID_ASSET_INDEX');
+  sourceRange(asset,asset.ptsUs[0],asset.endUs);
+  const bounds=[...asset.ptsUs,asset.endUs];
+  const lower=(target,lo=0)=>{let hi=bounds.length;while(lo<hi){const mid=(lo+hi)>>1;if(bounds[mid]<target)lo=mid+1;else hi=mid;}return lo;};
+  for(let i=lower(startUs);i<bounds.length-1&&bounds[i]<endUs;i++){
+    // outputFrames(duration) 的最小整数微秒，包含原有 1 微秒量化容差。
+    const minDuration=frames===1?1:Math.floor((frames-1)*1000000/30)+2;
+    const j=lower(bounds[i]+minDuration,i+1);
+    if(j<bounds.length&&bounds[j]<=endUs&&outputFrames(bounds[j]-bounds[i])===frames)
+      return {inUs:bounds[i],outUs:bounds[j],inFrame:i,outFrame:j,frames};
+  }
+  fail('NO_EXACT_SOURCE_RANGE');
 }
 
 function checkedPlan(plan,registered){
@@ -150,6 +168,17 @@ export class DraftImports {
   constructor(store){this.store=store;}
   capabilities(){return {schemaVersion:1,workspaceId:this.store.workspaceId,features:[...FEATURES],canvas:{width:1080,height:1920,fps:{numerator:30,denominator:1}},maxDurationFrames:1800,maxAssets:64,maxPlanBytes:MAX_BYTES,maxRequestBytes:MAX_REQUEST_BYTES,maxActivePreparations:16,maxReservedOperations:256,mode:'new-candidate'};}
   scope(request,keys){object(request,keys,'request');if(request.workspaceId!==this.store.workspaceId)fail('WORKSPACE_MISMATCH');id(request.operationId,'operationId');}
+  async mapSource(request){
+    object(request,['workspaceId','assetId','sha256','bytes','startUs','endUs','frames'],'request');
+    if(request.workspaceId!==this.store.workspaceId)fail('WORKSPACE_MISMATCH');
+    id(request.assetId,'assetId');
+    if(typeof request.sha256!=='string'||!/^[a-f0-9]{64}$/.test(request.sha256))fail('INVALID_ASSET_IDENTITY');
+    integer(request.bytes,1,512*1024*1024,'bytes');
+    const asset=this.store.state.assets.find(a=>a.assetId===request.assetId&&a.kind==='video'&&a.sha256===request.sha256&&a.bytes===request.bytes);
+    if(!asset)fail('ASSET_NOT_READY');
+    await verifyFiles(this.store.root,[asset]);
+    return mapSourceRange(asset,request.startUs,request.endUs,request.frames);
+  }
   async prepare(request){
     // 冻结调用者对象，等待存储写锁期间不能被修改。
     request=structuredClone(request);this.scope(request,['workspaceId','operationId','plan']);
@@ -208,12 +237,12 @@ export class DraftImports {
       const url=new URL(request.url),route=url.pathname;
       if(request.method==='GET'&&route==='/api/copy-edit/draft/capabilities')return Response.json({ok:true,value:this.capabilities()});
       if(request.method==='GET'&&route==='/api/copy-edit/draft/receipt')return Response.json({ok:true,value:this.receipt({workspaceId:url.searchParams.get('workspaceId'),operationId:url.searchParams.get('operationId')})});
-      if(request.method!=='POST'||!['/api/copy-edit/draft/prepare','/api/copy-edit/draft/commit'].includes(route))return new Response(null,{status:404});
+      if(request.method!=='POST'||!['/api/copy-edit/draft/prepare','/api/copy-edit/draft/commit','/api/copy-edit/draft/map-source'].includes(route))return new Response(null,{status:404});
       if(!/^application\/json(?:;|$)/i.test(request.headers.get('content-type')||''))return new Response(null,{status:415});
       let size=0,chunks=[];if(!request.body)fail('INVALID_JSON');
       for await(const b of request.body){size+=b.length;if(size>MAX_REQUEST_BYTES)fail('PLAN_TOO_LARGE');chunks.push(b);}
       let value;try{value=JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{fail('INVALID_JSON');}
-      const result=route.endsWith('/prepare')?await this.prepare(value):await this.commit(value);
+      const result=route.endsWith('/prepare')?await this.prepare(value):route.endsWith('/map-source')?await this.mapSource(value):await this.commit(value);
       return Response.json({ok:true,value:result});
     }catch(e){
       if(e instanceof DraftImportError)return Response.json({ok:false,error:{code:e.code,field:e.field}}, {status:e.code==='PLAN_TOO_LARGE'?413:409});

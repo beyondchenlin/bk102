@@ -57,6 +57,9 @@ test('替换裁切后的素材按时长换算，不沿用旧入点或旧帧号',
     const q=editProject(p,{type:'replaceClip',clipId,assetId},media);
     assert.deepEqual({clipId:q.clips[0].clipId,assetId:q.clips[0].assetId,inFrame:q.clips[0].inFrame,outFrame:q.clips[0].outFrame},{clipId,assetId,inFrame:0,outFrame});assert.equal(compilePlan(q,media).totalFrames,frames);
   }
+  const imported={...p,draftImport:{warnings:[],pendingGaps:[]}};
+  assert.throws(()=>editProject(imported,{type:'replaceClip',clipId,assetId:'short'},media),/时长不足/);
+  assert.deepEqual(imported.clips,p.clips);
   assert.equal(p.clips[0].inFrame,24);assert.equal(p.clips[0].outFrame,105);
 });
 
