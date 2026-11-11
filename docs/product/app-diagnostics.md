@@ -32,4 +32,4 @@
 
 实现位于 `ErrorLogRepository`、`StartupDiagnosticEvidence`、`StartupRecoveryActivity` 和 `DiagnosticActivity` 的主源码中，不受 preview/debug 构建开关控制。以后打包需保留这两个入口和归档格式说明；增加新故障证据时保持有界、脱敏、只读及来源明确。
 
-关联回归覆盖重启后真实错误保留、旧运行时/文件不一致、运行时证据损坏时仍能导出错误、链接拒绝、凭据脱敏、Unicode 截断和大日志归档。APK 的构建、签名和软件检查不能代替目标手机实际反馈；本次 OPPO 启动失败仍等待新的诊断文件归因。
+关联回归覆盖重启后真实错误保留、旧运行时/文件不一致、运行时证据损坏时仍能导出错误、链接拒绝、凭据脱敏、Unicode 截断和大日志归档。APK 的构建、签名和软件检查不能代替目标手机实际反馈。mobile28 回传已定位客户端语法错误，修复及验证见 [mobile29 记录](copy-edit-mobile29-startup-fix-20261112.md)，目标手机覆盖后的结果仍待确认。

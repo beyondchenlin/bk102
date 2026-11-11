@@ -1,6 +1,6 @@
 {
   "name": "dsh-copy-edit",
-  "version": "0.2.0-mobile.25",
+  "version": "0.2.0-mobile.29",
   "description": "文案剪辑：文案版本与桌面剪辑最小闭环",
   "type": "module",
   "private": true,
@@ -34,6 +34,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
+    "pretest:contract": "npm run build",
     "test:contract": "node --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "prepack": "npm run build"

@@ -24,5 +24,5 @@ function SelectionImport({workspace,onClose,onImported}){
       h('label',null,'背景音乐',h('input',{type:'file',accept:'audio/*','aria-label':'选择背景音乐',onChange:e=>setMusic(e.target.files?.[0]||null),disabled:working})),
       h('p',{className:'file-detail'},'未选择的音轨保持为空；导入后可继续添加。素材库口令不会保存。'),
       error&&h('p',{role:'alert',className:'dce-error'},error),status&&h('p',{role:'status'},status),
-      button(working?'导入中':'生成可编辑工程',run,{className:'primary',disabled:working||!info||!token}),working&&button('停止',()=>controller.current?.abort()));
+      button(working?'导入中':'生成可编辑工程',run,{className:'primary',disabled:working||!info||!token}),working&&button('停止',()=>controller.current?.abort())));
 }

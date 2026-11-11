@@ -1,6 +1,7 @@
 import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import {Script} from 'node:vm';
 const root=path.resolve(import.meta.dirname,'..');
 execFileSync(process.execPath,[path.join(root,'node_modules/typescript/bin/tsc')],{cwd:root,stdio:'inherit'});
 const trim=fs.readFileSync(path.join(root,'src/trim.cjs'),'utf8');
@@ -32,4 +33,7 @@ const body=fs.readFileSync(path.join(root,'src/client.cjs'),'utf8')
   .replace('__COPY_EDIT_STICKER_GESTURE__',fs.readFileSync(path.join(root,'src/sticker-gesture.cjs'),'utf8'))
   .replace('__COPY_EDIT_PREVIEW__',`(()=>{const module={exports:{}};${preview}\nreturn module.exports;})()`)
   .replace('__COPY_EDIT_TRIM__',`(()=>{const module={exports:{}};${trim}\nreturn module.exports;})()`);
-fs.writeFileSync(path.join(root,'lib/client.js'),`window.__ModuleLoader__.load({id:'dsh-copy-edit',factory:(require)=>{const module={exports:{}};const exports=module.exports;\n${body}\nreturn module.exports;}});\n`);
+const client=`window.__ModuleLoader__.load({id:'dsh-copy-edit',factory:(require)=>{const module={exports:{}};const exports=module.exports;\n${body}\nreturn module.exports;}});\n`;
+// TypeScript 不会解析这些拼接的 CJS 组件；必须校验浏览器实际收到的完整脚本后才能打包。
+new Script(client,{filename:'dsh-copy-edit/lib/client.js'});
+fs.writeFileSync(path.join(root,'lib/client.js'),client);

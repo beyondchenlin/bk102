@@ -23,9 +23,10 @@ def main():
     parser.add_argument('--apk', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--expected-plugin-version', default='0.2.0-mobile.12')
+    parser.add_argument('--receipt', type=Path, help='复用已有构建目录时指定本轮冻结清单')
     args = parser.parse_args()
     assets = args.source / 'app/src/main/assets'
-    receipt = json.loads((args.source.parent / 'preview-inputs.json').read_text(encoding='utf8'))
+    receipt = json.loads((args.receipt or args.source.parent / 'preview-inputs.json').read_text(encoding='utf8'))
     registry = json.loads((assets / 'builtin-plugins.json').read_text(encoding='utf8'))
     plugin = json.loads((assets / 'builtin-plugins/dsh-copy-edit/package.json').read_text(encoding='utf8'))
     assert plugin['version'] == args.expected_plugin_version
@@ -34,6 +35,12 @@ def main():
         names = apk.namelist()
         manifest = json.loads(apk.read('assets/managed-runtime-inputs.json'))
         descriptor = json.loads(apk.read('assets/runtime-descriptor.json'))
+        # 后端 ESM 导入不能证明网页能解析：直接检查交付 APK 内的完整客户端脚本。
+        client = apk.read('assets/builtin-plugins/dsh-copy-edit/lib/client.js')
+        parsed = subprocess.run(['node', '--check', '--input-type=commonjs'], input=client,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=30)
+        assert parsed.returncode == 0, parsed.stdout.decode('utf8', errors='replace')
+        checks.append('精确APK内完整文案剪辑前端脚本解析通过')
         assert json.loads(apk.read('assets/builtin-plugins.json')) == registry
         assert 'dsh-copy-edit' in apk.read('assets/dsha-builtin.txt').decode().splitlines()
         prefix='builtin-plugins/dsh-copy-edit/'
