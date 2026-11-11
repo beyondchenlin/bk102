@@ -25,6 +25,7 @@ public final class StartupRecoveryActivity extends AppCompatActivity {
   private String previousTask = "";
   private String shownReadError = "";
   private boolean wasBusy;
+  private boolean diagnosticExportRequested;
 
   private static String t(String zh, String en) {
     return UiText.choose(zh, en);
@@ -33,6 +34,7 @@ public final class StartupRecoveryActivity extends AppCompatActivity {
   @Override
   protected void onCreate(Bundle saved) {
     super.onCreate(saved);
+    diagnosticExportRequested = saved != null && saved.getBoolean("diagnostic_export_requested");
     controller = HarnessController.get(this);
     if (!controller.config().isWelcomed()) {
       startActivity(new Intent(this, WelcomeActivity.class));
@@ -48,6 +50,56 @@ public final class StartupRecoveryActivity extends AppCompatActivity {
     snapshots = layout.snapshots;
     plugins = layout.plugins;
     progress = layout.progress;
+    var diagnosticLogs = new ViewModelProvider(this).get(ErrorLogRepository.class);
+    diagnosticLogs.state.observe(
+        this,
+        state -> {
+          if (!diagnosticExportRequested || state == null) return;
+          status(state.message);
+          if (state.busy) return;
+          diagnosticExportRequested = false;
+          // 失败时 State 可能保留上次 URI；不能把旧包当作本次导出交付。
+          if (state.exported && state.uri != null) {
+            new DshaDialogBuilder(this)
+                .setTitle(t("启动诊断已保存", "Startup diagnostics saved"))
+                .setMessage(state.message)
+                .setPositiveButton(
+                    t("分享诊断文件", "Share diagnostics"),
+                    (dialog, which) -> {
+                      try {
+                        android.net.Uri uri = state.uri;
+                        if ("file".equals(uri.getScheme()))
+                          uri =
+                              androidx.core.content.FileProvider.getUriForFile(
+                                  this,
+                                  getPackageName() + ".updates",
+                                  new java.io.File(uri.getPath()));
+                        Intent share =
+                            new Intent(Intent.ACTION_SEND)
+                                .setType("application/gzip")
+                                .putExtra(Intent.EXTRA_STREAM, uri)
+                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        share.setClipData(android.content.ClipData.newRawUri("diagnostics", uri));
+                        startActivity(
+                            Intent.createChooser(share, t("分享诊断文件", "Share diagnostics")));
+                      } catch (RuntimeException unavailable) {
+                        Toast.makeText(this, state.message, Toast.LENGTH_LONG).show();
+                      }
+                    })
+                .setNegativeButton(t("关闭", "Close"), null)
+                .show();
+          }
+        });
+    action(
+        layout.recovery,
+        t("一键导出诊断", "Export startup diagnostics"),
+        R.drawable.ic_recovery_document,
+        () -> {
+          if (diagnosticExportRequested) return;
+          diagnosticExportRequested = true;
+          diagnosticLogs.download();
+        },
+        false);
     action(
         layout.recovery,
         t("启动独立应急 DSH", "Start independent emergency DSH"),
@@ -168,6 +220,12 @@ public final class StartupRecoveryActivity extends AppCompatActivity {
   private void status(String text) {
     progress.setText(text);
     progress.setVisibility(text.isEmpty() ? View.GONE : View.VISIBLE);
+  }
+
+  @Override
+  protected void onSaveInstanceState(Bundle state) {
+    state.putBoolean("diagnostic_export_requested", diagnosticExportRequested);
+    super.onSaveInstanceState(state);
   }
 
   private int dp(int value) {

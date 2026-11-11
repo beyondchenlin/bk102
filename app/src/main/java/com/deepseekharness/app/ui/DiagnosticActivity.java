@@ -236,8 +236,8 @@ public final class DiagnosticActivity extends AppCompatActivity {
         .setTitle(com.deepseekharness.app.util.UiText.choose("导出故障包", "Export diagnostics"))
         .setMessage(
             com.deepseekharness.app.util.UiText.choose(
-                "包含结构化状态、现有脱敏操作记录尾部和摘要。原始进程输出、完整异常链及未采集的历史不会补入。附加说明默认不选，仅包含本页输入，不开启自动业务记录。",
-                "Includes structured state, existing redacted operation tails and a summary. Raw process output, full exception chains and uncollected history are unavailable. Additional context is off by default and contains only this page's input; it enables no automatic business capture."))
+                "包含最近三次及当前启动的脱敏日志尾部、运行时版本与文件校验、操作摘要。异常链以原记录为准，缺失历史不会补造。不读取对话、工程或密钥配置；附加说明仅包含本页输入。",
+                "Includes redacted trace tails from the last three starts and current startup, runtime identity and file checks, and operation summaries. Exception chains are included only as recorded. Conversation, project and credential files are not read; optional context contains only this page's input."))
         .setView(include)
         .setNegativeButton(
             com.deepseekharness.app.util.UiText.choose("取消", "Cancel"),

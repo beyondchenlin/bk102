@@ -4,6 +4,8 @@ BK Harenss（仓库名 BK102）是由陈林维护的 [DSHA](https://github.com/D
 
 主开发分支为 `dev`；当前 [mobile25 开发里程碑](docs/product/milestone-mobile25-20261110.md) 汇总文案、剪辑、Android 原生媒体与手机布局工作。完整 ARM64 首启和运行时更新尚未验收，不能视为正式发布。`main` 保留上游基线。
 
+APP 默认保留[故障诊断导出](docs/product/app-diagnostics.md)：启动失败可在原生恢复页一键导出，平时可从诊断页面导出，将脱敏错误和版本信息反馈给 AI 或维护者。
+
 本分支尚未完成 ARM64 真机的运行时验收。以下内容为上游项目说明，其中发布包、支持渠道、版本和服务信息不代表 BK102 的独立承诺。
 
 ## 上游 DSHA 项目说明
