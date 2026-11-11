@@ -30,6 +30,8 @@ export class CopyEditService extends TypertRemoteService {
     this.nativeImports = new NativeImports(this.store);
     this.draftImports = new DraftImports(this.store);
     this.ready = this.store.init().then(async () => { await this.media.init(); await this.nativeImports.init(); });
+    // 初始化失败仍由调用方读取原错误，避免未处理的拒绝导致整个 DSH 进程退出。
+    void this.ready.catch(() => {});
     // 注册随插件撤销，媒体仅使用 DSH 已鉴权的传输，不新增监听端口。
     for (const [route, methods, streaming] of [
       ['upload', ['POST'], true], ['media', ['GET', 'HEAD'], false], ['frame', ['GET'], false], ['native-upload', ['POST'], true], ['native-import', ['GET'], false],

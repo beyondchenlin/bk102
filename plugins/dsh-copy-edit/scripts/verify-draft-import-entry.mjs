@@ -40,3 +40,22 @@ test('构建后的实际插件注册草案入口并随生命周期撤销，准�
     const entries=await fs.readdir(root,{recursive:true,withFileTypes:true});assert(!entries.some(e=>e.isSymbolicLink()));await fs.rm(root,{recursive:true});
   }
 });
+
+test('文案库初始化失败不终止宿主，锁和错误均保留',async()=>{
+  const base=path.resolve(import.meta.dirname,'../../../build/copy-edit-desktop/unit');await fs.mkdir(base,{recursive:true});
+  const root=await fs.mkdtemp(path.join(base,'lock-entry-')),previous=process.env.DSH_HOME;
+  const lock=path.join(root,'copy-edit','writer.lock');await fs.mkdir(path.dirname(lock));await fs.writeFile(lock,'existing-test-lock');
+  process.env.DSH_HOME=root;let ctx;const routes=new Map();
+  try{
+    ctx=new Context();ctx.provide('connection',{fetch:{register(route){routes.set(route.path,route);return ()=>routes.delete(route.path);}}});
+    await ctx.plugin(CopyEditService).await();
+    await new Promise(resolve=>setTimeout(resolve,50));
+    const response=await routes.get('/api/copy-edit/draft/capabilities').fetch(new Request('http://isolated/api/copy-edit/draft/capabilities'));
+    assert.equal(response.status,400);assert.match((await response.json()).error,/文案库已被其他进程占用/);
+    assert.equal(await fs.readFile(lock,'utf8'),'existing-test-lock');
+  }finally{
+    try{await ctx?.fiber.dispose();}finally{if(previous===undefined)delete process.env.DSH_HOME;else process.env.DSH_HOME=previous;}
+    const resolved=await fs.realpath(root);assert.equal(path.dirname(resolved).toLowerCase(),base.toLowerCase());
+    const entries=await fs.readdir(root,{recursive:true,withFileTypes:true});assert(!entries.some(e=>e.isSymbolicLink()));await fs.rm(root,{recursive:true});
+  }
+});
