@@ -77,6 +77,7 @@ export async function importSelection({origin,token,planId,revision,workspaceId,
     const stickerText=manifest.text.trim().split(/[。！？\n]/u)[0].slice(0,500);
     const image=await add(await stickerFile(stickerText),'image'),voice=await add(voiceFile,'audio'),music=await add(musicFile,'audio');
     if(voice&&(!Number.isSafeInteger(voice.durationUs)||voice.durationUs<1||Math.max(1,Math.ceil((voice.durationUs-1)*30/1e6))>manifest.target_frames))throw Error('配音长于画面计划，请调整配音或返回素材库修改时长');
+    if(assets.length>64||assets.reduce((n,a)=>n+a.bytes,0)>2*1024**3)throw Error('选中素材与音频超过 BK 导入上限，请调整后重试');
     const plan={schemaVersion:1,draftId:planId,revision,requiredCapabilities:['draft.atomic.v1','tracks.four.v1','source.pts.v1','source.mapping.v1','gaps.persist.v1'],canvas:{width:1080,height:1920,fps:{numerator:30,denominator:1}},text:manifest.text,assets,clips,
       stickers:image?[{stickerId:'sticker-'+planId,assetId:image.assetId,text:stickerText,color:'#ffffff',stroke:'#202124',background:'#202124',transparent:true,x:0,y:230,width:1080,startFrame:0,endFrame:null}]:[],
       voices:voice?[{voiceId:'voice-'+planId,assetId:voice.assetId,text:manifest.text,inUs:0,outUs:voice.durationUs,startFrame:0,volume:1}]:[],

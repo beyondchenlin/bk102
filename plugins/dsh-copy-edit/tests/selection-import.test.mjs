@@ -75,3 +75,9 @@ test('素材库超大清单在登记之前拒绝',async()=>{
   f.options.fetcher=async(url,opt)=>url.includes('/export?')?new Response('x'.repeat(256*1024+1)):fetch(url,opt);
   await assert.rejects(importSelection(f.options),/清单超过大小限制/);assert.equal(f.uploads,0);
 });
+test('音频与原片总量超限时不冻结草案',async()=>{
+  const f=fixture(),upload=f.options.uploadFile;
+  f.options.musicFile=new File(['music'],'music.wav',{type:'audio/wav'});
+  f.options.uploadFile=async file=>file.type==='audio/wav'?{kind:'audio',assetId:'music',sha256:'d'.repeat(64),bytes:2*1024**3,durationUs:500000}:upload(file);
+  await assert.rejects(importSelection(f.options),/超过 BK 导入上限/);assert(![...f.map.values()].some(x=>JSON.parse(x).plan));
+});

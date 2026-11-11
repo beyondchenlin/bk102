@@ -1,7 +1,7 @@
 function SelectionImport({workspace,onClose,onImported}){
   const [info,setInfo]=useState(''),[token,setToken]=useState(''),[voice,setVoice]=useState(null),[music,setMusic]=useState(null),[working,setWorking]=useState(false),[status,setStatus]=useState(''),[error,setError]=useState('');
   const controller=useRef(null);useEffect(()=>()=>controller.current?.abort(),[]);
-  usePanelLayer(true,()=>{if(!working)onClose();},20);
+  usePanelLayer(true,()=>{if(working)controller.current?.abort();else onClose();},20);
   const run=async()=>{
     if(working)return;setWorking(true);setError('');controller.current=new AbortController();const signal=controller.current.signal;
     try{
@@ -13,7 +13,7 @@ function SelectionImport({workspace,onClose,onImported}){
         storage:localStorage,fetcher:(url,options)=>fetch(url,{...options,signal}),uploadFile:file=>upload(file,signal),newId:uid,onProgress:setStatus
       }));
       setToken('');await onImported(receipt);
-    }catch(e){setError(e instanceof SyntaxError?'请粘贴素材库复制的选片信息':e.message);}
+    }catch(e){setError(signal.aborted?'已停止，可再次导入以恢复同一操作。':e instanceof SyntaxError?'请粘贴素材库复制的选片信息':e.message);}
     finally{controller.current=null;setWorking(false);setStatus('');}
   };
   return h('div',{className:'dce-selection-import',role:'dialog','aria-modal':'true','aria-label':'导入素材库选片'},
@@ -24,5 +24,5 @@ function SelectionImport({workspace,onClose,onImported}){
       h('label',null,'背景音乐',h('input',{type:'file',accept:'audio/*','aria-label':'选择背景音乐',onChange:e=>setMusic(e.target.files?.[0]||null),disabled:working})),
       h('p',{className:'file-detail'},'未选择的音轨保持为空；导入后可继续添加。素材库口令不会保存。'),
       error&&h('p',{role:'alert',className:'dce-error'},error),status&&h('p',{role:'status'},status),
-      button(working?'导入中':'生成可编辑工程',run,{className:'primary',disabled:working||!info||!token})));
+      button(working?'导入中':'生成可编辑工程',run,{className:'primary',disabled:working||!info||!token}),working&&button('停止',()=>controller.current?.abort()));
 }
