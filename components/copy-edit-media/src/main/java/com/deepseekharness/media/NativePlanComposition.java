@@ -17,7 +17,8 @@ public final class NativePlanComposition {
     private NativePlanComposition() {}
     public static Composition create(FrozenRenderPlan plan,File privateBlackImage)throws Exception {
         EditedMediaItemSequence.Builder video=new EditedMediaItemSequence.Builder(Set.of(C.TRACK_TYPE_VIDEO));
-        for(FrozenRenderPlan.Clip c:plan.clips())video.addItem(new EditedMediaItem.Builder(media(c.asset(),c.startUs(),c.endUs())).setDurationUs(c.asset().durationUs()).setRemoveAudio(true).build());
+        for(FrozenRenderPlan.Clip c:plan.clips())video.addItem(new EditedMediaItem.Builder(media(c.asset(),c.startUs(),c.endUs())).setDurationUs(c.asset().durationUs()).setRemoveAudio(true)
+                .setEffects(new Effects(ImmutableList.of(),ImmutableList.of(new SourceFrameEffect(c.sourceTimes(),c.startUs())))).build());
         int tail=plan.expectedFrames()-plan.videoFrames();
         if(tail>0){
             if(!privateBlackImage.exists()){Bitmap black=Bitmap.createBitmap(16,16,Bitmap.Config.ARGB_8888);black.eraseColor(android.graphics.Color.BLACK);try(OutputStream out=new FileOutputStream(privateBlackImage)){if(!black.compress(Bitmap.CompressFormat.PNG,100,out))throw new IOException("BLACK_IMAGE_FAILED");}finally{black.recycle();}}
@@ -70,15 +71,17 @@ public final class NativePlanComposition {
     }
     private static MediaItem media(AuthorizedAssets.Asset asset,long start,long end){return new MediaItem.Builder().setUri(Uri.fromFile(asset.file())).setClippingConfiguration(new MediaItem.ClippingConfiguration.Builder().setStartPositionUs(start).setEndPositionUs(end).build()).build();}
     private static final class TimedSticker extends BitmapOverlay {
-        private final FrozenRenderPlan.Sticker source;private final Bitmap bitmap;private final StaticOverlaySettings visible,hidden;
+        private final FrozenRenderPlan.Sticker source;private Bitmap bitmap;private final StaticOverlaySettings visible,hidden;
         TimedSticker(FrozenRenderPlan.Sticker source){
             this.source=source;bitmap=BitmapFactory.decodeFile(source.asset().file().toString());if(bitmap==null)throw new IllegalArgumentException("INVALID_STICKER_BITMAP");
             float scale=source.width()/1080f,cx=source.x()+source.width()/2f,cy=source.y()+400*scale/2;
             visible=settings(scale,cx,cy,1);hidden=settings(scale,cx,cy,0);
         }
         private StaticOverlaySettings settings(float scale,float cx,float cy,float alpha){return new StaticOverlaySettings.Builder().setScale(scale,scale).setBackgroundFrameAnchor(cx/540-1,1-cy/960).setAlphaScale(alpha).build();}
-        @Override public Bitmap getBitmap(long timeUs){return bitmap;}
+        // Media3在镜头的选帧效果变化时重建GL链，同一个全局贴片会重新使用。
+        // release只释放本轮位图，下一轮按已授权的同一文件重建，不能返回回收后的Bitmap。
+        @Override public Bitmap getBitmap(long timeUs){if(bitmap==null){bitmap=BitmapFactory.decodeFile(source.asset().file().toString());if(bitmap==null)throw new IllegalArgumentException("INVALID_STICKER_BITMAP");}return bitmap;}
         @Override public OverlaySettings getOverlaySettings(long timeUs){long frame=Math.round(timeUs*30d/1_000_000);return frame>=source.startFrame()&&frame<source.endFrame()?visible:hidden;}
-        @Override public void release()throws VideoFrameProcessingException{try{super.release();}finally{bitmap.recycle();}}
+        @Override public void release()throws VideoFrameProcessingException{try{super.release();}finally{if(bitmap!=null){bitmap.recycle();bitmap=null;}}}
     }
 }

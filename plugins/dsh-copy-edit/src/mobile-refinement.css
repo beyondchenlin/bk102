@@ -91,9 +91,6 @@
   .dce.dce-page-edit .dce-preview-empty{gap:12px;font-size:13px;line-height:20px}
   .dce.dce-page-edit .dce-preview-empty svg{width:32px;height:32px}
   .dce.dce-page-edit .dce-playback{height:var(--dce-control);padding:0 12px;min-height:var(--dce-control);gap:8px;flex-wrap:nowrap;color:#edf0f5;background:#14161b}
-  .dce.dce-page-edit .dce-playback button{min-height:var(--dce-control);min-width:48px;width:48px;padding:0;border:0;font-size:var(--dce-ui-font);color:#bec5d0;background:transparent}
-  .dce.dce-page-edit .dce-playback .dce-play{width:48px;min-width:48px;background:#edf0f5;border:8px solid transparent;background-clip:padding-box;color:#20252d;border-radius:50%;font-size:0;gap:0}
-  .dce.dce-page-edit .dce-playback .dce-play svg{width:18px;height:18px}
   .dce.dce-page-edit .dce-timecode{flex-basis:auto;margin:0 0 0 auto;font-size:var(--dce-ui-font);line-height:18px;white-space:nowrap}
   .dce.dce-page-edit .dce-timecode>span{color:#929ba8}
   .dce.dce-page-edit .dce-source-scrub{height:24px;min-height:24px;padding:0 16px;gap:8px;font-size:10px;color:#a7afba;background:#14161b}

@@ -62,8 +62,13 @@ def main():
             for name in ('NativePreview', 'PreviewCodec', 'NativePreviewAudio', 'DrainAudioOutput', 'PcmPlaybackClock', 'AudioTailPadding'):
                 assert ('Lcom/deepseekharness/media/' + name + ';').encode() in dex, name
             assert b'Ldsh/copyedit/spike/' not in dex
-            assert b'native-plan-v4/media3-1.11.1/' in dex
-            checks.append('实际DEX包含原生缓存播放器、PCM排空时钟与v4缓存契约，不含独立验收Activity')
+            mapping = int(plugin['version'].rsplit('.', 1)[1]) >= 30
+            contract_version = 'v5' if mapping else 'v4'
+            assert ('native-plan-' + contract_version + '/media3-1.11.1/').encode() in dex
+            if mapping:
+                for name in ('SourceFrameMapping', 'SourceFrameEffect'):
+                    assert ('Lcom/deepseekharness/media/' + name + ';').encode() in dex, name
+            checks.append('实际DEX包含原生播放器、PCM排空时钟与' + contract_version + '帧映射缓存契约，不含独立验收Activity')
         checks.extend([str(len(receipt['pluginMembers']))+' 个插件文件与冻结 '+plugin['version']+' 包逐字节一致', '全部受管安装文件与 APK 描述符摘要一致',
                        'APK 插件注册清单和默认启用清单一致', 'ARM64 原生库及离线环境齐全', '无测试工程、服务认证文件或调试网页夹具'])
 

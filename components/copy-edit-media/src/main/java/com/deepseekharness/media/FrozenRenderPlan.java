@@ -8,12 +8,14 @@ import java.util.*;
 /** 插件 compilePlan 的只读投影；先校验摘要、授权素材和PTS，再允许创建编解码器。 */
 public record FrozenRenderPlan(String projectId,long revision,boolean preview,int expectedFrames,String planHash,
         List<Clip> clips,List<Sticker> stickers,List<Audio> audio,List<Music> music) implements RenderJobSnapshot {
-    public record Clip(AuthorizedAssets.Asset asset,long startUs,long endUs,int frames) {}
+    public record Clip(AuthorizedAssets.Asset asset,long startUs,long endUs,int frames,List<Long> sourceTimes) {
+        public Clip { sourceTimes=List.copyOf(sourceTimes); }
+    }
     public record Sticker(AuthorizedAssets.Asset asset,int startFrame,int endFrame,int x,int y,int width) {}
     public record Audio(AuthorizedAssets.Asset asset,long inUs,long outUs,int startFrame,float volume,boolean loop) {}
     public record Music(AuthorizedAssets.Asset asset,int startFrame,int endFrame,long offsetSamples,float volume) {}
     public FrozenRenderPlan {clips=List.copyOf(clips);stickers=List.copyOf(stickers);audio=List.copyOf(audio);music=List.copyOf(music);}
-    @Override public String key(){return sha("native-plan-v4/media3-1.11.1/"+planHash+"/"+(preview?"preview-360x640":"export-1080x1920"));}
+    @Override public String key(){return sha("native-plan-v5/media3-1.11.1/"+planHash+"/"+(preview?"preview-360x640":"export-1080x1920"));}
     public int videoFrames(){return clips.stream().mapToInt(Clip::frames).sum();}
     public static FrozenRenderPlan parse(String envelope,AuthorizedAssets registry,String expectedProject,long expectedRevision)throws Exception {
         require(envelope!=null&&envelope.getBytes(StandardCharsets.UTF_8).length<=600_000,"PLAN_SIZE_LIMIT");
@@ -37,11 +39,10 @@ public record FrozenRenderPlan(String projectId,long revision,boolean preview,in
             // 交给Media3的边界必须用设备实际PTS，否则会把恰在边界前1µs的帧丢掉。
             start=a.pts().get(in);end=out==a.pts().size()?a.durationUs():a.pts().get(out);
             int frames=(int)integer(c,"frames",1,1800);integer(c,"startFrame",offset,offset);
-            // 首个通用适配版本只接受已索引CFR30；拒绝会改变源帧选择的VFR/采样率映射。
-            require(frames==out-in&&Math.abs(end-start-Math.round(frames*1_000_000d/30))<=1,"NATIVE_FRAME_MAPPING_UNSUPPORTED");
-            for(int n=in;n<out;n++)require(Math.abs(a.pts().get(n)-start-Math.round((n-in)*1_000_000d/30))<=1,"NATIVE_FRAME_MAPPING_UNSUPPORTED");
-            if(c.has("window")){JSONObject w=c.getJSONObject("window");int wi=(int)integer(w,"inFrame",0,in),wo=(int)integer(w,"outFrame",out,a.pts().size()),skip=(int)integer(w,"offset",0,1800);integer(w,"frames",frames,frames);require(wi+skip==in&&wo>=out,"NATIVE_WINDOW_UNSUPPORTED");}
-            clips.add(new Clip(a,start,end,frames));offset+=frames;
+            int wi=in,wo=out,skip=0;boolean windowed=c.has("window");
+            if(windowed){JSONObject w=c.getJSONObject("window");wi=(int)integer(w,"inFrame",0,in);wo=(int)integer(w,"outFrame",out,a.pts().size());skip=(int)integer(w,"offset",0,1800);integer(w,"frames",frames,frames);}
+            List<Long> mapping=SourceFrameMapping.create(a.pts(),a.durationUs(),in,out,wi,wo,skip,frames,windowed);
+            clips.add(new Clip(a,start,end,frames,mapping));offset+=frames;
         }
         require(offset==videoFrames,"VIDEO_FRAMES_MISMATCH");
         List<Sticker> stickers=new ArrayList<>();Set<String> stickerIds=new HashSet<>();JSONArray images=array(plan,"stickers",0,30);

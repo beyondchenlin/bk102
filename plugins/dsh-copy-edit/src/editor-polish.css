@@ -15,8 +15,12 @@
 .dce-page-edit .dce-media-item button:hover{background:#3a3e49}
 .dce-page-edit .dce-preview-stage{padding:18px}
 .dce-page-edit .dce-playback{border-top:0;padding:10px 12px;gap:8px}
-.dce-page-edit .dce-playback button{border-color:transparent;background:#24272e}
-.dce-page-edit .dce-playback .dce-play{background:#e8ebf2;color:#202228;min-width:128px;font-weight:500}
+/* 三个同级传输控制：安静的20px线性图标，共用44px触摸区，不再突出中央播放键。 */
+.dce.dce-page-edit .dce-playback .dce-transport{display:inline-flex;align-items:center;justify-content:center;flex:0 0 44px;width:44px;min-width:44px;height:44px;min-height:44px;padding:0;border:0;border-radius:8px;color:#bec5d0;background:transparent;gap:0}
+.dce.dce-page-edit .dce-playback .dce-transport svg{width:20px;height:20px;flex:none}
+@media (hover:hover){.dce.dce-page-edit .dce-playback .dce-transport:hover:not(:disabled){background:#303641;color:#edf0f5}}
+.dce.dce-page-edit .dce-playback .dce-transport:active:not(:disabled){background:#303641;color:#edf0f5}
+.dce.dce-page-edit .dce-playback .dce-transport:focus-visible{outline:2px solid #85a4ff;outline-offset:-2px}
 .dce-page-edit .dce-timecode{font-size:12px}
 .dce-page-edit .dce-source-scrub{padding:0 16px 10px}
 .dce-page-edit .dce-properties{padding:16px}

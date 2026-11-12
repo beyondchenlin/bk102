@@ -12,7 +12,7 @@ import java.io.File;
 import java.util.function.Consumer;
 
 /** 页面所属的原生预览。网页只传当前结果身份和可见区域，不提供路径或可执行内容。 */
-@androidx.annotation.OptIn(markerClass=androidx.media3.common.util.UnstableApi.class)
+@androidx.annotation.OptIn(markerClass={androidx.media3.common.util.UnstableApi.class,androidx.media3.common.util.ExperimentalApi.class})
 public final class NativePreview implements AutoCloseable {
     public interface Observer {void frame(long ptsUs,long releaseNs,boolean playing);void dropped(int count);default void displayed(long ptsUs,long renderNs,boolean playing){}default void audio(long positionUs,long atNs){}}
     private final WebView web;private final String id;private final double duration;

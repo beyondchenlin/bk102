@@ -27,7 +27,6 @@
   .dce .dce-mobile-tools button {min-height:var(--dce-control,44px);flex:1}
   .dce .dce-preview-stage {height:clamp(160px,32dvh,300px);padding:8px}
   .dce .dce-playback {padding:6px 8px;gap:6px;flex-wrap:wrap}
-  .dce .dce-playback .dce-play {min-width:112px}
   .dce .dce-timecode {flex-basis:100%;margin:0;text-align:center}
   .dce .dce-source-scrub {padding:0 12px 4px}
   .dce .dce-timeline-tools {padding:6px 8px;gap:4px}
