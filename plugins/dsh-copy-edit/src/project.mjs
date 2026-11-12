@@ -249,7 +249,7 @@ export function editProject(original, command, assets) {
     case 'removeVoice': {preserveVoices(p,assets);const v=p.voiceClips.find(v=>v.voiceId===command.voiceId);if(!v)throw Error('配音不存在');p.voiceClips=p.voiceClips.filter(x=>x!==v);for(const c of p.clips)if(v.clipIds.includes(c.clipId)&&c.narration)c.narration.voice=null;break;}
     case 'setAudio': {
       if(!['voice','bgm'].includes(command.role))throw Error('音轨不存在');
-      if(command.role==='bgm'){delete p.musicClips;delete p.audio.bgmMode;}
+      if(command.role==='bgm'){delete p.musicClips;delete p.audio.bgmMode;p.audio.bgmConfigured=true;}
       if(command.assetId===null) {p.audio[command.role]=null;break;}
       assetOf(assets,command.assetId,'audio');
       if(!Number.isFinite(command.volume)||command.volume<0||command.volume>1)throw Error('音量超出范围');

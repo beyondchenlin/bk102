@@ -1,6 +1,6 @@
 {
   "name": "dsh-copy-edit",
-  "version": "0.2.0-mobile.31",
+  "version": "0.2.0-mobile.32",
   "description": "文案剪辑：文案版本与桌面剪辑最小闭环",
   "type": "module",
   "private": true,

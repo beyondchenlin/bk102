@@ -12,16 +12,19 @@ import { compilePlan } from './project.mjs';
 import { freezeNativePlan } from './native-media.mjs';
 import { NativeImports } from './native-imports.mjs';
 import { DraftImports } from './draft-import.mjs';
+import { CreationService } from './creation-service.mjs';
+import { registerCreationTools } from './creation-tools.js';
 
 export const name = 'copy-edit';
 export const inject = ['tools', 'connection'];
 
-/** 无设备桥、无密钥读取、无额外 HTTP 服务。 */
+/** 复用宿主认证通道；连接凭据只由独立生成服务读取。 */
 export class CopyEditService extends TypertRemoteService {
   store: ProjectStore;
   media: DesktopMedia;
   nativeImports: NativeImports;
   draftImports: DraftImports;
+  creation: CreationService;
   ready: Promise<void>;
   constructor(ctx: Context) {
     super(ctx, 'copyEdit', { namespace: 'copyEdit' });
@@ -29,18 +32,21 @@ export class CopyEditService extends TypertRemoteService {
     this.media = new DesktopMedia(this.store);
     this.nativeImports = new NativeImports(this.store);
     this.draftImports = new DraftImports(this.store);
+    this.creation = new CreationService(this.store, this.draftImports);
     this.ready = this.store.init().then(async () => { await this.media.init(); await this.nativeImports.init(); });
     // 初始化失败仍由调用方读取原错误，避免未处理的拒绝导致整个 DSH 进程退出。
     void this.ready.catch(() => {});
     // 注册随插件撤销，媒体仅使用 DSH 已鉴权的传输，不新增监听端口。
     for (const [route, methods, streaming] of [
       ['upload', ['POST'], true], ['media', ['GET', 'HEAD'], false], ['frame', ['GET'], false], ['native-upload', ['POST'], true], ['native-import', ['GET'], false],
-      ['draft/capabilities', ['GET'], false], ['draft/prepare', ['POST'], true], ['draft/commit', ['POST'], true], ['draft/receipt', ['GET'], false], ['draft/map-source', ['POST'], true]
+      ['draft/capabilities', ['GET'], false], ['draft/prepare', ['POST'], true], ['draft/commit', ['POST'], true], ['draft/receipt', ['GET'], false], ['draft/map-source', ['POST'], true],
+      ['creation/speech', ['POST'], false], ['creation/asset', ['GET'], false]
     ] as const) ctx.effect(() => ctx.connection.fetch.register({
       path: '/api/copy-edit/' + route, methods, requestBody: streaming ? 'streaming' : 'buffered',
       fetch: async (request: Request) => {
         try {
           await this.ready;
+          if (route.startsWith('creation/')) return await this.creation.response(request);
           if (route.startsWith('draft/')) return await this.draftImports.response(request);
           const url = new URL(request.url);
           if (route === 'native-upload') {
@@ -63,7 +69,7 @@ export class CopyEditService extends TypertRemoteService {
         }
       }
     }));
-    ctx.effect(() => async () => { await this.ready.catch(() => {}); await this.nativeImports.close(); await this.media.close(); await this.store.close(); });
+    ctx.effect(() => async () => { await this.ready.catch(() => {}); await this.creation.close(); await this.nativeImports.close(); await this.media.close(); await this.store.close(); });
   }
   @Remote('project')
   async project(projectId: string) { return getProject(projectId); }
@@ -75,7 +81,25 @@ export class CopyEditService extends TypertRemoteService {
     return {projectId: p.projectId, revision: p.revision, title: p.title, schemaVersion: p.schemaVersion};
   }
   @Remote('workspace')
-  async workspace() { await this.ready; return {...this.store.view(), voiceSettings: voiceSettingsView(this.store.state), capabilities: this.media.capabilities()}; }
+  async workspace() { await this.ready; return {...this.store.view(), creationJobs: this.creation.jobs.list(), creationConnections: await this.creation.connectionsView(), voiceSettings: voiceSettingsView(this.store.state), capabilities: this.media.capabilities()}; }
+  @Remote('creationConfirm')
+  async creationConfirm(request: any) { await this.ready; return this.creation.confirm(request); }
+  @Remote('creationState')
+  async creationState() { await this.ready; return this.creation.state(); }
+  @Remote('creationClaim')
+  async creationClaim(jobId: string) { await this.ready; return this.creation.claim(jobId); }
+  @Remote('creationHeartbeat')
+  async creationHeartbeat(jobId: string, leaseId: string) { await this.ready; return this.creation.jobs.heartbeat(jobId, leaseId); }
+  @Remote('creationCheckpoint')
+  async creationCheckpoint(jobId: string, leaseId: string, key: string, assetId: string) { await this.ready; return this.creation.jobs.checkpoint(jobId, leaseId, key, assetId); }
+  @Remote('creationSelection')
+  async creationSelection(jobId: string, leaseId: string) { await this.ready; return this.creation.selection(jobId, leaseId); }
+  @Remote('creationComplete')
+  async creationComplete(jobId: string, leaseId: string) { await this.ready; return this.creation.complete(jobId, leaseId); }
+  @Remote('creationFail')
+  async creationFail(jobId: string, leaseId: string, message: string) { await this.ready; return this.creation.jobs.fail(jobId, leaseId, message); }
+  @Remote('creationControl')
+  async creationControl(jobId: string, action: string, settings: any = {}) { await this.ready; return this.creation.control(jobId, action, settings); }
   @Remote('voiceSettings')
   async voiceSettings(request: Record<string, unknown>) { await this.ready; return this.store.write((state: any) => changeVoiceSettings(state, request)); }
   @Remote('mutate')
@@ -111,6 +135,7 @@ export class CopyEditService extends TypertRemoteService {
 
 export function apply(ctx: Context) {
   const fiber = ctx.plugin(CopyEditService);
+  registerCreationTools(ctx, async () => { await fiber.await(); const service = ctx.get('copyEdit') as CopyEditService; await service.ready; return service; });
   ctx.tools.register(defineTool({
     name: 'copy_edit_describe',
     description: '只读查询文案剪辑工程的 ID、版本和标题。不会生成、下载或导出媒体。',

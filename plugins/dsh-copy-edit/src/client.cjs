@@ -49,11 +49,12 @@ async function rpc(name,args={},options={}){
   const body=await response.json();if(!body.result?.ok)throw Error(body.result?.error?.message||'操作未完成，请重新载入');return body.result.value;
 }
 let nativeMediaRuntime=null,sourceFrameQueue=Promise.resolve();
-async function upload(file,signal){
-  if(nativeMediaRuntime?.caps.assetImport){const provider=nativeMediaRuntime;const response=await fetch('/api/copy-edit/native-upload?name='+encodeURIComponent(file.name||'贴片.png'),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream'},body:file,signal});const body=await response.json();if(!response.ok||!body.ok)throw Error(body.error||'素材导入失败');try{if(signal?.aborted)throw Error('素材导入已取消');return await provider.client.call('import',{importId:body.pending.assetId});}finally{await rpc('nativeImportDrop',{importId:body.pending.assetId}).catch(()=>{});}}
+async function upload(file,signal,provider=nativeMediaRuntime){
+  if(provider?.caps.assetImport){const response=await fetch('/api/copy-edit/native-upload?name='+encodeURIComponent(file.name||'贴片.png'),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream'},body:file,signal});const body=await response.json();if(!response.ok||!body.ok)throw Error(body.error||'素材导入失败');try{if(signal?.aborted)throw Error('素材导入已取消');return await provider.client.call('import',{importId:body.pending.assetId});}finally{await rpc('nativeImportDrop',{importId:body.pending.assetId}).catch(()=>{});}}
   const response=await fetch('/api/copy-edit/upload?name='+encodeURIComponent(file.name||'贴片.png'),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream'},body:file,signal});
   const body=await response.json();if(!response.ok||!body.ok)throw Error(body.error||'素材导入失败');return body.asset;
 }
+__COPY_EDIT_CREATION__
 // 缩略图串行请求，给逐帧预览保留解码槽；最多保留 64 张小图。
 const thumbnailCache=new Map();let thumbnailQueue=Promise.resolve();
 function thumbnail(url){
@@ -97,7 +98,7 @@ __COPY_EDIT_COPY_RESIZE_UI__
 __COPY_EDIT_COPY_TOOLS__
 __COPY_EDIT_COPY_VOICE__
 __COPY_EDIT_COPY_COMPOSITION__
-function CopyPage({p,assets,workspace,edit,perform,busy,notice,navigate,openExample,available,drafts,voiceAction,refresh,job,startRender,reportError,persist,forkRecovery,onDraftText}){
+function CopyPage({p,assets,workspace,edit,perform,busy,notice,navigate,openExample,available,drafts,voiceAction,refresh,job,startRender,reportError,persist,forkRecovery,onDraftText,generate}){
   const draft=drafts.current[p.projectId],copyStickers=projectStickers(p);
   const [copyStickerId,setCopyStickerId]=useState(draft?.stickerId||'');
   const existingSticker=copyStickerId==='new'?null:(copyStickers.find(s=>s.stickerId===copyStickerId)||copyStickers[0]);
@@ -133,7 +134,7 @@ function CopyPage({p,assets,workspace,edit,perform,busy,notice,navigate,openExam
     h('div',{className:'dce-document-scroll'},
     h('div',{className:'dce-document-toolbar'},
       h('select',{'aria-label':'文案版本',title:'切换版本或恢复未保存草稿',className:'dce-copy-version',value:copyChanged?'draft':String(version),onChange:e=>selectVersion(e.target.value)},copyChanged&&h('option',{value:'draft'},'草稿'),h('optgroup',{label:'已保存版本'},...p.versions.map(v=>h('option',{key:v.version,value:v.version},'V'+v.version))),otherDrafts.length>0&&h('optgroup',{label:'未保存草稿（'+otherDrafts.length+'）'},...otherDrafts.map((c,i)=>h('option',{key:c.key,value:'recover:'+c.key},'草稿 '+(i+1)+'：'+copySummary(c.draft.text).name)))),
-      h('div',{className:'dce-copy-tools'},h(CopyAction,{text,perform,busy}),button('保存版本',save,{disabled:busy,className:'quiet dce-save-copy'}),action('film','打开剪辑',()=>navigate('edit'),{className:'dce-desktop-edit'}))),
+      h('div',{className:'dce-copy-tools'},h(CopyAction,{text,perform,busy}),button('保存版本',save,{disabled:busy,className:'quiet dce-save-copy'}),button('生成视频',()=>perform(async()=>{if(p.title!==copyBase.current.title||p.text!==copyBase.current.text)throw Error('此文案已更新，请先重新载入');const result=await generate(p,text);copyBase.current={title:result.title,text:result.text};setVersion(result.versions.length);}),{disabled:busy||!text.trim(),className:'primary'}),action('film','打开剪辑',()=>navigate('edit'),{className:'dce-desktop-edit'}))),
     h('div',{className:'dce-document-body'},h('div',{className:'dce-copy-writing'},
       h('textarea',{id:'dce-copy','aria-label':'文案正文',className:'copy-text',ref:textRef,rows:3,value:text,placeholder:'写下你的文案…',maxLength:20000,onChange:e=>setText(e.target.value)}),
       copyChanged&&h('div',{className:'dce-mobile-copy-meta',role:'status'},'未保存'),
@@ -156,7 +157,7 @@ function CopyWorkspace(props){
   const [draftText,setDraftText]=useState(()=>Object.fromEntries(Object.entries(props.drafts.current).filter(([,v])=>typeof v.text==='string').map(([id,v])=>[id,v.text])));
   const onDraftText=React.useCallback((id,text)=>setDraftText(current=>current[id]===text?current:{...current,[id]:text}),[]);
   const content=p=>draftText[p.projectId]??p.text;
-  const [search,setSearch]=useState(memory.current.search||''),[showList,setShowList]=useState(memory.current.showList||false);const matches=props.workspace.projects.filter(p=>content(p).toLowerCase().includes(search.toLowerCase()));
+  const [search,setSearch]=useState(memory.current.search||''),[showList,setShowList]=useState(memory.current.showList||false);const matches=props.workspace.projects.filter(p=>(!p.creationSource||p.projectId===props.p.projectId)&&content(p).toLowerCase().includes(search.toLowerCase()));
   usePanelLayer(!resized.desktop&&showList,()=>setShowList(false));
   useEffect(()=>{memory.current={...memory.current,search,showList};props.persist();},[search,showList]);
   useEffect(()=>{if(items.current)items.current.scrollTop=memory.current.scrollTop||0;},[showList]);
@@ -401,6 +402,7 @@ function Panel({close}){
   const categoryAction=async command=>{const result=await rpc('library',{request:{expectedRevision:workspace.library.revision,operationId:uid(),command}});await refresh();return result;};
   const voiceAction=async(command,revision)=>{const result=await rpc('voiceSettings',{request:{expectedRevision:revision??workspace.voiceSettings.revision,operationId:uid(),command}});await refresh();return result;};
   const create=(to,category)=>perform(async()=>{const v=await rpc('create',{request:{title:to==='edit'?'未命名工程':'未命名文案',operationId:uid(),...(category?{category}:{})}});await refresh();navigate(to,v.projectId);});
+  const generate=async(project,text=project.text)=>{const result=await rpc('creationConfirm',{request:{operationId:uid(),intent:'video',projectId:project.projectId,expectedRevision:project.revision,text}});creationWorker?.wake();const state=await refresh();setNotice(result.job.status==='complete'?'已打开这版文案的生成结果':'文案已确认，正在准备视频');if(result.job.status==='complete')navigate('edit',result.job.projectId);return state.projects.find(p=>p.projectId===result.sourceProjectId);};
   const startRender=async profile=>{
     if(nativeCapability&&p.audio.timelineVersion===2&&!nativeCapability.segmentedAudio)throw Error('当前原生媒体版本不支持分段音轨，请更新预览 APK');
     const request={projectId:p.projectId,revision:p.revision,profile};
@@ -408,7 +410,8 @@ function Panel({close}){
   };
   const jobAction=(action,value,signal)=>value.executionLocation==='android-local'?(native.current&&window.DshaCopyEdit?native.current.call(action,{jobId:value.jobId}):Promise.resolve({status:'retired',error:'原生任务已退出，请重新发起'})):rpc(action,{jobId:value.jobId},{signal});
   const shareResult=async result=>{if(!native.current)throw Error('原生页面已退出');const accepted=await native.current.call('share',{jobId:result.jobId});if(!accepted.accepted)throw Error('分享未受理');for(let n=0;n<60;n++){await new Promise(resolve=>setTimeout(resolve,500));if(!alive.current)return;const state=await native.current.call('shareStatus',{jobId:result.jobId});if(state.status==='opened')return;if(state.status!=='pending')throw Error(state.error||'分享未完成');}throw Error('分享仍在准备，请稍后重试查询');};
-  useEffect(()=>{const client=createNativeMediaClient(window.DshaCopyEdit,{newId:uid});native.current=client;let disposed=false;client.capabilities().then(value=>{if(!disposed){setNativeCapability(value);nativeMediaRuntime=value?{client,caps:value}:null;}});return()=>{disposed=true;if(nativeMediaRuntime?.client===client)nativeMediaRuntime=null;if(window.DshaCopyEdit)void client.call('release').catch(()=>{});client.close();if(native.current===client)native.current=null;};},[]);
+  useEffect(()=>{let disposed=false,release;void acquireNativeRuntime().then(value=>{if(disposed){value.release();return;}release=value.release;native.current=value.provider?.client||null;setNativeCapability(value.provider?.caps||null);});return()=>{disposed=true;release?.();native.current=null;};},[]);
+  useEffect(()=>{const open=async value=>{if(!value)return;await refresh();if(!alive.current)return;navigate(value.status==='complete'?'edit':'home',value.projectId||value.sourceProjectId);creationDestination=null;};const changed=e=>{void open(e.detail);};window.addEventListener('bk-open-creation',changed);if(creationDestination)void open(creationDestination);return()=>window.removeEventListener('bk-open-creation',changed);},[]);
   useEffect(()=>{alive.current=true;refresh().catch(e=>{if(alive.current&&e.name!=='AbortError')setError(e.message);});const save=()=>persist();window.addEventListener('pagehide',save);return()=>{persist();alive.current=false;window.removeEventListener('pagehide',save);readSequence.current++;for(const controller of reads.current)controller.abort();reads.current.clear();};},[]);
   useEffect(()=>{if(!notice)return;const t=setTimeout(()=>setNotice(''),3500);return()=>clearTimeout(t);},[notice]);
   useEffect(()=>{if(!job||job.status!=='running')return;let disposed=false,inFlight=false;const controller=new AbortController();const t=setInterval(async()=>{if(inFlight)return;inFlight=true;try{const v=await boundedWorkspaceRead(signal=>jobAction('job',job,signal),{signal:controller.signal});if(disposed)return;setJob({...job,...v});if(v.status==='complete'){if(job.executionLocation==='android-local')setNativeResults(previous=>[...previous.filter(r=>r.jobId!==job.jobId),{...job,...v}]);await refresh();}if(v.status==='failed'||v.status==='retired')setError(v.error);}catch(e){if(!disposed)setError(e.message);}finally{inFlight=false;}},700);return()=>{disposed=true;controller.abort();clearInterval(t);};},[job?.jobId,job?.status]);
@@ -418,17 +421,18 @@ function Panel({close}){
   const header=h('header',{className:'dce-header'},h('div',{className:'dce-breadcrumb'},action('back',page==='home'?'返回对话':'返回',back,{className:'quiet','data-dsh-panel-back':true,'data-dsh-panel-depth':depth,'aria-label':page==='home'?'返回对话':'返回上一级'}),page==='home'?h('strong',{className:'dce-mobile-home-title'},labels.home):h(React.Fragment,null,h('span',{'aria-hidden':true},'/'),h('strong',null,labels[page]))),page==='edit'&&workspace&&h('select',{'aria-label':'选择工程',value:p?.projectId,onChange:e=>setProjectId(e.target.value)},...workspace.projects.map(x=>h('option',{key:x.projectId,value:x.projectId},copySummary(copyDisplayText(x,drafts.current)).name))));
   let body;
   if(!workspace)body=h('div',{className:'dce-loading',role:error?'alert':'status'},error?h(React.Fragment,null,h('p',null,error),button('重新载入',()=>perform(refresh),{disabled:busy})): '正在载入');
-  else if(page==='home')body=h(HomeWorkspace,{workspace,drafts,views:homeViews,setViews:setHomeViews,memory:homeMemory,busy,create,perform,categoryAction,refresh,notice:setNotice,open:(id,to)=>navigate(to,id)});
+  else if(page==='home')body=h(HomeWorkspace,{workspace,drafts,views:homeViews,setViews:setHomeViews,memory:homeMemory,busy,create,perform,categoryAction,refresh,notice:setNotice,generate,open:(id,to)=>navigate(to,id)});
   else if(page==='projects')body=h('div',{className:'dce-projects'},h('div',{className:'dce-page-title'},h('h1',null,'剪辑'),action('plus','新建工程',()=>create('edit'),{className:'primary',disabled:busy})),h('div',{className:'dce-project-grid'},...workspace.projects.map(x=>{const s=sections(x,workspace.assets),total=s.reduce((n,c)=>n+c.duration,0);return button(h(React.Fragment,null,h(Thumb,{asset:s[0]?.asset,frame:s[0]?.inFrame||0}),h('span',{className:'dce-project-description'},h('strong',null,copySummary(copyDisplayText(x,drafts.current)).name),h('span',null,shortTime(total)))),()=>{setProjectId(x.projectId);navigate('edit');},{key:x.projectId,className:'dce-project-card'});}))) ;
-  else if(page==='copy')body=h(CopyWorkspace,{p,workspace,setProjectId,create,edit,perform,busy,drafts,persist,forkRecovery:()=>forkPanelRecovery(durableWritten.current),copyMemory,notice:setNotice,navigate,available:workspace.importAvailable,openExample,voiceAction,refresh,job,startRender,reportError:setError});
+  else if(page==='copy')body=h(CopyWorkspace,{p,workspace,setProjectId,create,edit,perform,busy,drafts,persist,forkRecovery:()=>forkPanelRecovery(durableWritten.current),copyMemory,notice:setNotice,navigate,available:workspace.importAvailable,openExample,voiceAction,refresh,job,startRender,reportError:setError,generate});
   else body=h(EditPage,{key:p.projectId,p,displayName:copySummary(copyDisplayText(p,drafts.current)).name,editorMemory:editors,persist,history:workspace.history?.[p.projectId],assets:workspace.assets,results:workspace.results.filter(r=>r.executionLocation==='android-local'||!workspace.capabilities.renderVersion||r.renderVersion===workspace.capabilities.renderVersion),edit,perform,busy,job,startRender,shareResult,navigate,refresh,available:workspace.importAvailable,renderAvailable:workspace.renderAvailable,reportError:setError});
-  return h(PanelNavigation.Provider,{value:{register:registration.current}},h('section',{ref:root,className:'dce dce-page-'+page,'aria-label':'文案剪辑工作台','data-dsh-panel-navigation':'v1','data-dsh-panel-depth':depth},header,body,
+  return h(PanelNavigation.Provider,{value:{register:registration.current}},h('section',{ref:root,className:'dce dce-page-'+page,'aria-label':'文案剪辑工作台','data-dsh-panel-navigation':'v1','data-dsh-panel-depth':depth},header,workspace&&page!=='edit'&&h(CreationTasks,{workspace,perform,refresh,open:async id=>{await refresh();navigate('edit',id);}}),body,
     workspace&&error&&h('div',{role:'alert',className:'dce-error'},h('span',null,error),button('重新载入',()=>perform(refresh)),button('关闭',()=>setError(''),{className:'quiet'})),
     notice&&h('div',{role:'status',className:'dce-notice'},notice),
     ((workspace&&busy)||job?.status==='running')&&h('div',{className:'dce-pending'},h('span',{role:'status'},job?.status==='running'?(job.profile==='preview'?'正在准备预览':'正在导出'):'处理中'),job?.status==='running'&&h('progress',{'aria-label':job.profile==='preview'?'预览准备进度':'导出进度'}),job?.status==='running'&&button('取消',()=>perform(async()=>setJob({...job,...await jobAction('cancel',job)}))))));
 }
 exports.inject=['slots','layout'];
 exports.apply=function(ctx){
+  ctx.effect(()=>mountCreationController(ctx));
   ctx.effect(()=>{const style=document.createElement('style');style.dataset.plugin=ID;style.textContent=__COPY_EDIT_CSS__;document.head.appendChild(style);return()=>{style.remove();thumbnailCache.clear();};});
   ctx.effect(()=>ctx.slots.inject('main',()=>ctx.slots.register({name:'main',key:ID,inject:()=>({close:()=>ctx.layout.selectPanel(null)})},Panel)));
   ctx.effect(()=>ctx.slots.inject('sidebar.panellist',()=>ctx.slots.register({name:'sidebar.panellist',id:ID,order:10,label:()=> '文案剪辑'},()=>icon('film'))));

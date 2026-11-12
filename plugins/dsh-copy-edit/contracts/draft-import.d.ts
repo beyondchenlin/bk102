@@ -1,6 +1,6 @@
 /** 独立于编辑器快照的传输协议；通过现有DSH鉴权通道，不传路径或下载凭据。 */
 export interface DraftAsset {assetId:string;sha256:string;bytes:number;kind:'video'|'audio'|'image'}
-export interface DraftClip {clipId:string;assetId:string;inUs:number;outUs:number}
+export interface DraftClip {clipId:string;assetId:string;inUs:number;outUs:number;sourceVolume?:number}
 export interface DraftSticker {stickerId:string;assetId:string;text:string;color:string;stroke:string;background:string;transparent:boolean;x:number;y:number;width:number;startFrame:number;endFrame:number|null}
 export interface DraftVoice {voiceId:string;assetId:string;text:string;inUs:number;outUs:number;startFrame:number;volume:number}
 export interface DraftMusic {musicId:string;assetId:string;startFrame:number;endFrame:number|null;offsetSamples:number;volume:number}

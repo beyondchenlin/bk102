@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "material": {"origin": "https://your-material-library.example", "token": "configure-on-host"},
+  "speech": {
+    "endpoint": "https://your-speech-service.example/speech",
+    "token": "configure-on-host",
+    "model": "configured-model",
+    "voice": "configured-voice",
+    "idempotent": false
+  },
+  "defaults": {"narration": true, "speed": 1, "musicVolume": 0.2, "sourceVolume": 0, "targetFrames": 300}
+}

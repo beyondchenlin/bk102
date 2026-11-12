@@ -87,8 +87,8 @@ function checkedPlan(plan,registered){
   project.text=plan.text;project.versions=[{version:1,title:project.title,text:plan.text,savedAt:project.updatedAt}];
   let videoFrames=0;
   project.clips=clips.map(c=>{
-    object(c,['clipId','assetId','inUs','outUs'],'clip');const a=asset(c.assetId,'video');const range=sourceRange(a,c.inUs,c.outUs);
-    videoFrames+=outputFrames(c.outUs-c.inUs);return {clipId:c.clipId,assetId:a.assetId,...range};
+    object(c,['clipId','assetId','inUs','outUs','sourceVolume'],'clip');const a=asset(c.assetId,'video');const range=sourceRange(a,c.inUs,c.outUs);
+    videoFrames+=outputFrames(c.outUs-c.inUs);return {clipId:c.clipId,assetId:a.assetId,...range,...(c.sourceVolume!==undefined?{sourceVolume:volume(c.sourceVolume,'clip.sourceVolume')}:{})};
   });
   if(videoFrames>18000)fail('DURATION_EXCEEDED');
   const voices=list(plan.voices,120,'voices');unique(voices,'voiceId','voices');
@@ -201,10 +201,11 @@ export class DraftImports {
     });
   }
   ticket(p){return {status:'prepared',workspaceId:p.workspaceId,operationId:p.operationId,ticketId:p.ticketId,planHash:p.planHash,expiresAt:p.expiresAt};}
-  async commit(request){
+  async commit(request,{guard,afterCommit}={}){
     request=structuredClone(request);this.scope(request,['workspaceId','operationId','ticketId','planHash']);id(request.ticketId,'ticketId');
     if(!/^[a-f0-9]{64}$/.test(request.planHash))fail('INVALID_PLAN_HASH');
     return this.store.write(async state=>{
+      guard?.(state);
       const old=(state.draftReceipts||[]).find(r=>r.operationId===request.operationId);
       if(old){if(old.planHash!==request.planHash||old.ticketId!==request.ticketId)fail('OPERATION_CONFLICT');return old;}
       const row=(state.draftPreparations||[]).find(p=>p.ticketId===request.ticketId&&p.operationId===request.operationId);
@@ -228,7 +229,7 @@ export class DraftImports {
       const receipt={status:'committed',workspaceId:this.store.workspaceId,operationId:request.operationId,ticketId:request.ticketId,planHash:request.planHash,projectId,revision:project.revision,capabilities:this.capabilities(),assetMap:checked.assetMap,sourceRanges,warnings:project.draftImport.warnings,gaps:project.draftImport.pendingGaps};
       // 与工程在同一次原子state提交内保存永久回执，不使用旧100项编辑操作轮换窗口。
       state.projects.push(project);state.draftReceipts??=[];state.draftReceipts.push(receipt);
-      state.draftPreparations=state.draftPreparations.filter(p=>p.ticketId!==row.ticketId);return receipt;
+      state.draftPreparations=state.draftPreparations.filter(p=>p.ticketId!==row.ticketId);afterCommit?.(state,receipt);return receipt;
     });
   }
   receipt(request){this.scope(request,['workspaceId','operationId']);const r=(this.store.state.draftReceipts||[]).find(r=>r.operationId===request.operationId);return r?structuredClone(r):{status:'not_committed',operationId:request.operationId};}
