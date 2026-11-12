@@ -31,7 +31,7 @@ public final class NativePreview implements AutoCloseable {
 
     public NativePreview(WebView web,String id,File file,double duration,JSONObject bounds,Consumer<JSONObject> events,Observer observer)throws Exception {
         if(Looper.myLooper()!=Looper.getMainLooper())throw new IllegalStateException("MEDIA_MAIN_THREAD_REQUIRED");
-        if(!id.matches("[-a-fA-F0-9]{32,36}")||!Double.isFinite(duration)||duration<=0||duration>60)throw new IllegalArgumentException("PREVIEW_IDENTITY");
+        if(!id.matches("[-a-fA-F0-9]{32,36}")||!Double.isFinite(duration)||duration<=0||duration>600)throw new IllegalArgumentException("PREVIEW_IDENTITY");
         this.web=web;this.id=id;this.duration=duration;this.events=events;this.observer=observer;this.priorKeepScreenOn=web.getKeepScreenOn();
         layer=new FrameLayout(web.getContext());layer.setBackgroundColor(Color.rgb(20,22,27));surface=new SurfaceView(web.getContext());surface.setZOrderOnTop(true);layer.addView(surface);
         DefaultRenderersFactory renderers=new DefaultRenderersFactory(web.getContext()){

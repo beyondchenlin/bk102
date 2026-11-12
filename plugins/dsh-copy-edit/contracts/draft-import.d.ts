@@ -22,7 +22,7 @@ export interface DraftReceipt extends DraftCommit {status:'committed';projectId:
 export interface DraftCapabilities {
   schemaVersion:1;workspaceId:string;features:string[];
   canvas:{width:1080;height:1920;fps:{numerator:30;denominator:1}};
-  maxDurationFrames:1800;maxAssets:64;maxPlanBytes:number;maxRequestBytes:number;
+  maxDurationFrames:18000;maxAssets:64;maxPlanBytes:number;maxRequestBytes:number;
   maxActivePreparations:16;maxReservedOperations:256;mode:'new-candidate';
 }
 /** POST /api/copy-edit/draft/prepare、commit、map-source；GET capabilities、receipt。

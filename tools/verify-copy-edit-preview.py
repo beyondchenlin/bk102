@@ -63,7 +63,7 @@ def main():
                 assert ('Lcom/deepseekharness/media/' + name + ';').encode() in dex, name
             assert b'Ldsh/copyedit/spike/' not in dex
             mapping = int(plugin['version'].rsplit('.', 1)[1]) >= 30
-            contract_version = 'v5' if mapping else 'v4'
+            contract_version = 'v6' if int(plugin['version'].rsplit('.', 1)[1]) >= 31 else 'v5' if mapping else 'v4'
             assert ('native-plan-' + contract_version + '/media3-1.11.1/').encode() in dex
             if mapping:
                 for name in ('SourceFrameMapping', 'SourceFrameEffect'):

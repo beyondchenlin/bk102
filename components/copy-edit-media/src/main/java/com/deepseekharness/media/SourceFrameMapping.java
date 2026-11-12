@@ -20,7 +20,7 @@ public final class SourceFrameMapping {
         long origin = pts.get(windowIn);
         long end = windowOut == pts.size() ? durationUs : pts.get(windowOut);
         int available = framesFor(end - origin);
-        require(offset >= 0 && frames > 0 && frames <= 1800 && (long) offset + frames <= available);
+        require(offset >= 0 && frames > 0 && frames <= 18000 && (long) offset + frames <= available);
         if (!windowed) require(windowIn == in && windowOut == out && offset == 0 && frames == available);
         List<Long> selected = new ArrayList<>(frames);
         int source = windowIn;

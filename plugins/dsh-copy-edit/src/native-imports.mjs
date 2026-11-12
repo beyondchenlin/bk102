@@ -8,7 +8,7 @@ export function checkedNativeMetadata(value,sha){
   if(value.kind==='audio')return {kind:'audio',durationUs:integer(value.durationUs,1,600000000),mime:typeof value.mime==='string'&&/^audio\/[a-z0-9.+-]{1,64}$/.test(value.mime)?value.mime:'application/octet-stream'};
   const endUs=integer(value.endUs,1,600000000),width=integer(value.width,1,4096),height=integer(value.height,1,4096),pts=value.ptsUs;
   if(!Array.isArray(pts)||!pts.length||pts.length>20000||width*height>16777216)throw Error('视频索引超出范围');let previous=-1;for(const p of pts){integer(p,0,endUs-1);if(p<=previous)throw Error('视频PTS必须递增');previous=p;}
-  return {kind:'video',width,height,rotation:[0,90,180,270].includes(value.rotation)?value.rotation:0,ptsUs:[...pts],endUs,mime:'video/mp4'};
+  return {kind:'video',width,height,rotation:[0,90,180,270].includes(value.rotation)?value.rotation:0,ptsUs:[...pts],endUs,mime:'video/mp4',...(typeof value.hasAudio==='boolean'?{hasAudio:value.hasAudio}:{})};
 }
 export class NativeImports {
   constructor(store){this.store=store;this.entries=new Map();this.life=new AbortController();this.inflight=new Set();this.bytes=0;}

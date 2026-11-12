@@ -9,8 +9,9 @@ import java.util.*;
 
 /** 宿主授权读取后复制进私有不可变槽位；页面只能提供ID，不能提供路径或URI。 */
 public final class AuthorizedAssets {
-    public record Asset(String id,String kind,String sha256,File file,long durationUs,List<Long> pts,int width,int height,int rotation,String mime) {
+    public record Asset(String id,String kind,String sha256,File file,long durationUs,List<Long> pts,int width,int height,int rotation,String mime,boolean hasAudio) {
         public Asset {pts=List.copyOf(pts);}
+        public Asset(String id,String kind,String sha256,File file,long durationUs,List<Long> pts,int width,int height,int rotation,String mime){this(id,kind,sha256,file,durationUs,pts,width,height,rotation,mime,false);}
     }
     private final Path root;
     private final Map<String,Asset> assets=new HashMap<>();
@@ -46,10 +47,10 @@ public final class AuthorizedAssets {
     private Asset inspect(String id,String kind,String sha,File file)throws Exception {
         org.json.JSONObject meta=NativeAssetProbe.inspect(file,sha);String actual=meta.getString("kind");if(!kind.equals("auto")&&!kind.equals(actual))throw new IllegalArgumentException("ASSET_KIND_MISMATCH");
         List<Long> pts=new ArrayList<>();org.json.JSONArray indexed=meta.optJSONArray("ptsUs");if(indexed!=null)for(int i=0;i<indexed.length();i++)pts.add(indexed.getLong(i));
-        return new Asset(id,actual,sha,file,meta.optLong(actual.equals("video")?"endUs":"durationUs",0),pts,meta.optInt("width",0),meta.optInt("height",0),meta.optInt("rotation",0),meta.getString("mime"));
+        return new Asset(id,actual,sha,file,meta.optLong(actual.equals("video")?"endUs":"durationUs",0),pts,meta.optInt("width",0),meta.optInt("height",0),meta.optInt("rotation",0),meta.getString("mime"),meta.optBoolean("hasAudio",false));
     }
     public static org.json.JSONObject metadata(Asset asset)throws org.json.JSONException {
-        org.json.JSONObject out=new org.json.JSONObject().put("sha256",asset.sha256()).put("kind",asset.kind()).put("mime",asset.mime());
+        org.json.JSONObject out=new org.json.JSONObject().put("sha256",asset.sha256()).put("kind",asset.kind()).put("mime",asset.mime()).put("hasAudio",asset.hasAudio());
         if(asset.kind().equals("video"))out.put("ptsUs",new org.json.JSONArray(asset.pts())).put("endUs",asset.durationUs()).put("rotation",asset.rotation());
         if(asset.kind().equals("audio"))out.put("durationUs",asset.durationUs());else out.put("width",asset.width()).put("height",asset.height());return out;
     }

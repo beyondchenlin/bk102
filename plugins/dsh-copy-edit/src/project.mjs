@@ -28,6 +28,7 @@ export function validateClip(clip, assets) {
   const a=assetOf(assets,clip.assetId,'video');
   integer(clip.inFrame,0,a.ptsUs.length-1,'入点');
   integer(clip.outFrame,clip.inFrame+1,a.ptsUs.length,'出点');
+  if(clip.sourceVolume!==undefined&&(!Number.isFinite(clip.sourceVolume)||clip.sourceVolume<0||clip.sourceVolume>1))throw Error('原声音量超出范围');
   if(clip.window){const w=clip.window;integer(w.inFrame,0,a.ptsUs.length-1,'解码入点');integer(w.outFrame,w.inFrame+1,a.ptsUs.length,'解码出点');const length=outputFrames((w.outFrame===a.ptsUs.length?a.endUs:a.ptsUs[w.outFrame])-a.ptsUs[w.inFrame]);integer(w.offset,0,length-1,'分段起点');integer(w.frames,1,length-w.offset,'分段长度');}
   return a;
 }
@@ -49,7 +50,7 @@ function stickerContent(s,assets){
   for(const k of ['color','stroke','background'])if(!/^#[\da-f]{6}$/i.test(s[k]))throw Error('贴片颜色不符合要求');
   return {assetId:s.assetId,text:s.text,color:s.color,stroke:s.stroke,background:s.background,transparent:s.transparent===true,...stickerTransform(s)};
 }
-function validateStickerTime(s){integer(s.startFrame,0,1799,'贴片开始帧');if(s.endFrame!==null)integer(s.endFrame,s.startFrame+1,1800,'贴片结束帧');}
+function validateStickerTime(s){integer(s.startFrame,0,17999,'贴片开始帧');if(s.endFrame!==null)integer(s.endFrame,s.startFrame+1,18000,'贴片结束帧');}
 function writableStickers(p){if(p.stickers===undefined){p.stickers=structuredClone(projectStickers(p));p.sticker=null;}return p.stickers;}
 function findSticker(p,stickerId){const s=writableStickers(p).find(s=>s.stickerId===stickerId);if(!s)throw Error('文字贴片不存在');return s;}
 function preserveVoices(p,assets){if(p.audio.voiceMode==='independent')return;p.voiceClips=structuredClone(independentVoices(p,assets));p.audio.voiceMode='independent';}
@@ -84,10 +85,10 @@ export function compilePlan(project, assets, profile='export') {
   if(voiceMode==='clips')for(const v of independentVoices(project,assets))voices.push({...v,clipId:v.clipIds[0]});
   if(voiceMode==='independent'){
     integer((project.voiceClips||[]).length,0,120,'配音片段数量');const ids=new Set();
-    for(const v of project.voiceClips||[]){if(typeof v.voiceId!=='string'||ids.has(v.voiceId))throw Error('配音标识无效');ids.add(v.voiceId);integer(v.startFrame,0,1799,'配音开始帧');validateNarration({text:v.text,copyVersion:v.copyVersion,voice:v},project,assets);voices.push({...v});}
+    for(const v of project.voiceClips||[]){if(typeof v.voiceId!=='string'||ids.has(v.voiceId))throw Error('配音标识无效');ids.add(v.voiceId);integer(v.startFrame,0,17999,'配音开始帧');validateNarration({text:v.text,copyVersion:v.copyVersion,voice:v},project,assets);voices.push({...v});}
   }
   offset=Math.max(offset,...voices.map(v=>v.startFrame+voiceFrames(v)));
-  if(offset>1800) throw Error('当前版本支持画面和配音总长不超过 60 秒');
+  if(offset>18000) throw Error('当前版本支持画面和配音总长不超过 10 分钟');
   const refs=[...clips.map(c=>c.assetId)];
   const allStickers=projectStickers(project),seen=new Set();integer(allStickers.length,0,120,'贴片数量');
   for(const s of allStickers)if(s.binding)bindingCheck(s.binding,project);
@@ -101,7 +102,7 @@ export function compilePlan(project, assets, profile='export') {
   for(const v of voices)refs.push(v.assetId);
   const music=[];if(project.audio.bgmMode==='segments'){
     integer((project.musicClips||[]).length,0,120,'音乐片段数量');const ids=new Set();
-    for(const m of project.musicClips||[]){const a=assetOf(assets,m.assetId,'audio');if(typeof m.musicId!=='string'||!/^[-\w]{1,80}$/.test(m.musicId)||ids.has(m.musicId))throw Error('音乐标识无效');ids.add(m.musicId);integer(m.startFrame,0,1799,'音乐开始帧');if(m.endFrame!==null)integer(m.endFrame,m.startFrame+1,1800,'音乐结束帧');integer(m.offsetSamples,0,musicSamples(a)-1,'音乐源位置');if(!Number.isFinite(m.volume)||m.volume<0||m.volume>1)throw Error('音乐音量超出范围');const endFrame=Math.min(m.endFrame??offset,offset);if(m.startFrame<endFrame)music.push({...m,endFrame});}
+    for(const m of project.musicClips||[]){const a=assetOf(assets,m.assetId,'audio');if(typeof m.musicId!=='string'||!/^[-\w]{1,80}$/.test(m.musicId)||ids.has(m.musicId))throw Error('音乐标识无效');ids.add(m.musicId);integer(m.startFrame,0,17999,'音乐开始帧');if(m.endFrame!==null)integer(m.endFrame,m.startFrame+1,18000,'音乐结束帧');integer(m.offsetSamples,0,musicSamples(a)-1,'音乐源位置');if(!Number.isFinite(m.volume)||m.volume<0||m.volume>1)throw Error('音乐音量超出范围');const endFrame=Math.min(m.endFrame??offset,offset);if(m.startFrame<endFrame)music.push({...m,endFrame});}
     for(const m of music)refs.push(m.assetId);
   }
   const activeAudio={voice:voiceMode==='global'?project.audio.voice:null,bgm:project.audio.bgmMode==='segments'?null:project.audio.bgm};
@@ -117,7 +118,7 @@ export function compilePlan(project, assets, profile='export') {
 }
 export function editProject(original, command, assets) {
   const p=structuredClone(original);
-  if(['trimClip','splitClip','replaceClip','removeClip','moveClip'].includes(command.type)&&command.preserveVoice!==false&&independentVoices(p,assets).length)preserveVoices(p,assets);
+  if(['restoreClip','trimClip','splitClip','replaceClip','removeClip','moveClip'].includes(command.type)&&command.preserveVoice!==false&&independentVoices(p,assets).length)preserveVoices(p,assets);
   switch(command.type) {
     case 'saveCopy': {
       p.title=string(command.title,120,'标题').trim()||'未命名文案';
@@ -129,15 +130,23 @@ export function editProject(original, command, assets) {
     case 'addClip': {
       const a=assetOf(assets,command.assetId,'video');
       if(p.clips.length>=120)throw Error('最多 120 个镜头');
-      // 长素材默认只取前 4 秒，所有边界仍来自源 PTS。
-      const stop=a.ptsUs.findIndex(t=>t>=4000000);
-      p.clips.push({clipId:id(),assetId:a.assetId,inFrame:0,outFrame:stop>0?stop:a.ptsUs.length});break;
+      p.clips.push({clipId:id(),assetId:a.assetId,inFrame:0,outFrame:a.ptsUs.length,sourceVolume:1});break;
+    }
+    case 'setSourceVolume': {
+      const c=p.clips.find(c=>c.clipId===command.clipId);if(!c)throw Error('镜头不存在');
+      c.sourceVolume=command.volume;validateClip(c,assets);break;
     }
     case 'trimClip': {
       const c=p.clips.find(c=>c.clipId===command.clipId);if(!c)throw Error('镜头不存在');
       const a=validateClip(c,assets);integer(command.inFrame,0,a.ptsUs.length-1,'入点');integer(command.outFrame,command.inFrame+1,a.ptsUs.length,'出点');const old=clipWindow(c,a),next=trimmedClip(c,a,command.inFrame,command.outFrame);validateClip(next,assets);
       const shifted=next.window?next.window.offset-old.offset:Math.round((a.ptsUs[next.inFrame]-a.ptsUs[c.inFrame])*30/1e6);
       timingChange(p,c.clipId,shifted);Object.assign(c,next);if(!next.window)delete c.window;break;
+    }
+    case 'restoreClip': {
+      const c=p.clips.find(c=>c.clipId===command.clipId);if(!c)throw Error('镜头不存在');
+      const a=validateClip(c,assets),w=clipWindow(c,a);
+      timingChange(p,c.clipId,-Math.round((a.ptsUs[w.inFrame]-a.ptsUs[0])*30/1e6)-w.offset);
+      c.inFrame=0;c.outFrame=a.ptsUs.length;delete c.window;break;
     }
     case 'splitClip': {
       const index=p.clips.findIndex(c=>c.clipId===command.clipId);if(index<0)throw Error('镜头不存在');if(p.clips.length>=120)throw Error('最多 120 个镜头');
@@ -219,7 +228,7 @@ export function editProject(original, command, assets) {
       const cut=integer(command.frame,m.startFrame+1,Math.min(m.endFrame??total,total)-1,'分割点'),right={...m,musicId:id(),startFrame:cut,offsetSamples:musicPhaseAt(m,cut,assetOf(assets,m.assetId,'audio'))};m.endFrame=cut;p.musicClips.splice(p.musicClips.indexOf(m)+1,0,right);p.audio.timelineVersion=2;break;
     }
     case 'removeMusic': {preserveMusic(p);if(!p.musicClips.some(m=>m.musicId===command.musicId))throw Error('音乐片段不存在');p.musicClips=p.musicClips.filter(m=>m.musicId!==command.musicId);p.audio.timelineVersion=2;break;}
-    case 'editMusic': {preserveMusic(p);const m=p.musicClips.find(m=>m.musicId===command.musicId);if(!m)throw Error('音乐片段不存在');integer(command.startFrame,0,1799,'音乐开始帧');integer(command.endFrame,command.startFrame+1,1800,'音乐结束帧');if(!Number.isFinite(command.volume)||command.volume<0||command.volume>1)throw Error('音乐音量超出范围');Object.assign(m,{startFrame:command.startFrame,endFrame:command.endFrame,volume:command.volume});p.audio.timelineVersion=2;break;}
+    case 'editMusic': {preserveMusic(p);const m=p.musicClips.find(m=>m.musicId===command.musicId);if(!m)throw Error('音乐片段不存在');integer(command.startFrame,0,17999,'音乐开始帧');integer(command.endFrame,command.startFrame+1,18000,'音乐结束帧');if(!Number.isFinite(command.volume)||command.volume<0||command.volume>1)throw Error('音乐音量超出范围');Object.assign(m,{startFrame:command.startFrame,endFrame:command.endFrame,volume:command.volume});p.audio.timelineVersion=2;break;}
     case 'setVoiceMode': {
       if(!['global','clips','independent'].includes(command.mode))throw Error('配音方式不支持');
       if(command.mode==='independent')preserveVoices(p,assets);
@@ -236,7 +245,7 @@ export function editProject(original, command, assets) {
         else if(v)v.clipIds=v.clipIds.filter(id=>id!==c.clipId);
       }break;
     }
-    case 'editVoice': {preserveVoices(p,assets);const v=p.voiceClips.find(v=>v.voiceId===command.voiceId);if(!v)throw Error('配音不存在');integer(command.startFrame,0,1799,'配音开始帧');const next={...v,startFrame:command.startFrame,inUs:command.inUs,outUs:command.outUs,volume:command.volume};validateNarration({text:v.text,copyVersion:v.copyVersion,voice:next},p,assets);Object.assign(v,next);for(const c of p.clips)if(v.clipIds.includes(c.clipId)&&c.narration)c.narration.voice={assetId:v.assetId,inUs:v.inUs,outUs:v.outUs,volume:v.volume};break;}
+    case 'editVoice': {preserveVoices(p,assets);const v=p.voiceClips.find(v=>v.voiceId===command.voiceId);if(!v)throw Error('配音不存在');integer(command.startFrame,0,17999,'配音开始帧');const next={...v,startFrame:command.startFrame,inUs:command.inUs,outUs:command.outUs,volume:command.volume};validateNarration({text:v.text,copyVersion:v.copyVersion,voice:next},p,assets);Object.assign(v,next);for(const c of p.clips)if(v.clipIds.includes(c.clipId)&&c.narration)c.narration.voice={assetId:v.assetId,inUs:v.inUs,outUs:v.outUs,volume:v.volume};break;}
     case 'removeVoice': {preserveVoices(p,assets);const v=p.voiceClips.find(v=>v.voiceId===command.voiceId);if(!v)throw Error('配音不存在');p.voiceClips=p.voiceClips.filter(x=>x!==v);for(const c of p.clips)if(v.clipIds.includes(c.clipId)&&c.narration)c.narration.voice=null;break;}
     case 'setAudio': {
       if(!['voice','bgm'].includes(command.role))throw Error('音轨不存在');

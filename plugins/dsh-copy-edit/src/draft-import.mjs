@@ -47,7 +47,7 @@ export function sourceRange(asset,inUs,outUs){
 /** 只在请求的镜头范围内寻找实际边界，保持用户指定的工程帧数；来源授权由素材库核验。 */
 export function mapSourceRange(asset,startUs,endUs,frames){
   integer(startUs,0,600000000,'startUs');integer(endUs,startUs+1,600000000,'endUs');
-  integer(frames,1,1800,'frames');
+  integer(frames,1,18000,'frames');
   if(!Array.isArray(asset.ptsUs)||!asset.ptsUs.length)fail('INVALID_ASSET_INDEX');
   sourceRange(asset,asset.ptsUs[0],asset.endUs);
   const bounds=[...asset.ptsUs,asset.endUs];
@@ -90,12 +90,12 @@ function checkedPlan(plan,registered){
     object(c,['clipId','assetId','inUs','outUs'],'clip');const a=asset(c.assetId,'video');const range=sourceRange(a,c.inUs,c.outUs);
     videoFrames+=outputFrames(c.outUs-c.inUs);return {clipId:c.clipId,assetId:a.assetId,...range};
   });
-  if(videoFrames>1800)fail('DURATION_EXCEEDED');
+  if(videoFrames>18000)fail('DURATION_EXCEEDED');
   const voices=list(plan.voices,120,'voices');unique(voices,'voiceId','voices');
   project.voiceClips=voices.map(v=>{
     object(v,['voiceId','assetId','text','inUs','outUs','startFrame','volume'],'voice');const a=asset(v.assetId,'audio');
     integer(a.durationUs,1,600000000,'audio.durationUs');integer(v.inUs,0,a.durationUs-1,'voice.inUs');integer(v.outUs,v.inUs+1,a.durationUs,'voice.outUs');
-    integer(v.startFrame,0,1799,'voice.startFrame');text(v.text,2000,'voice.text');if(!v.text.trim())fail('INVALID_TEXT','voice.text');
+    integer(v.startFrame,0,17999,'voice.startFrame');text(v.text,2000,'voice.text');if(!v.text.trim())fail('INVALID_TEXT','voice.text');
     return {...v,assetId:a.assetId,clipIds:[],copyVersion:1,volume:volume(v.volume,'voice.volume')};
   });
   project.audio={timelineVersion:2,voiceMode:'independent',bgmMode:'segments',voice:null,bgm:null};
@@ -107,22 +107,22 @@ function checkedPlan(plan,registered){
     if(typeof s.transparent!=='boolean')fail('INVALID_STYLE','transparent');
     integer(s.width,216,1080,'sticker.width');integer(s.x,Math.ceil(-s.width/2),Math.floor(1080-s.width/2),'sticker.x');
     integer(s.y,Math.ceil(-400*s.width/2160),Math.floor(1920-400*s.width/2160),'sticker.y');
-    integer(s.startFrame,0,1799,'sticker.startFrame');if(s.endFrame!==null)integer(s.endFrame,s.startFrame+1,1800,'sticker.endFrame');
+    integer(s.startFrame,0,17999,'sticker.startFrame');if(s.endFrame!==null)integer(s.endFrame,s.startFrame+1,18000,'sticker.endFrame');
     return {...s,assetId:a.assetId};
   });unique(project.stickers,'stickerId','stickers');
   project.musicClips=list(plan.music,120,'music').map(m=>{
     object(m,['musicId','assetId','startFrame','endFrame','offsetSamples','volume'],'music');const a=asset(m.assetId,'audio');
-    integer(a.durationUs,1,600000000,'music.durationUs');integer(m.startFrame,0,1799,'music.startFrame');
-    if(m.endFrame!==null)integer(m.endFrame,m.startFrame+1,1800,'music.endFrame');
+    integer(a.durationUs,1,600000000,'music.durationUs');integer(m.startFrame,0,17999,'music.startFrame');
+    if(m.endFrame!==null)integer(m.endFrame,m.startFrame+1,18000,'music.endFrame');
     integer(m.offsetSamples,0,Math.max(1,Math.round(a.durationUs*48000/1e6))-1,'music.offsetSamples');
     return {...m,assetId:a.assetId,volume:volume(m.volume,'music.volume')};
   });unique(project.musicClips,'musicId','music');
   const warnings=list(plan.warnings,120,'warnings').map(w=>{object(w,['clipId','message'],'warning');if(!clips.some(c=>c.clipId===w.clipId))fail('UNKNOWN_CLIP','warning');text(w.message,1000,'warning.message');return {...w};});
-  const gaps=list(plan.gaps,120,'gaps').map(g=>{object(g,['gapId','startFrame','frames','text','reason'],'gap');id(g.gapId,'gapId');integer(g.startFrame,0,1799,'gap.startFrame');integer(g.frames,1,1800-g.startFrame,'gap.frames');text(g.text,2000,'gap.text');text(g.reason,1000,'gap.reason');return {...g};});unique(gaps,'gapId','gaps');
+  const gaps=list(plan.gaps,120,'gaps').map(g=>{object(g,['gapId','startFrame','frames','text','reason'],'gap');id(g.gapId,'gapId');integer(g.startFrame,0,17999,'gap.startFrame');integer(g.frames,1,18000-g.startFrame,'gap.frames');text(g.text,2000,'gap.text');text(g.reason,1000,'gap.reason');return {...g};});unique(gaps,'gapId','gaps');
   const sorted=[...gaps].sort((a,b)=>a.startFrame-b.startFrame);for(let i=1;i<sorted.length;i++)if(sorted[i].startFrame<sorted[i-1].startFrame+sorted[i-1].frames)fail('OVERLAPPING_GAPS');
   if(!clips.length&&!gaps.length)fail('EMPTY_DRAFT');
   const logicalFrames=videoFrames+gaps.reduce((n,g)=>n+g.frames,0);
-  if(logicalFrames>1800)fail('DURATION_EXCEEDED');
+  if(logicalFrames>18000)fail('DURATION_EXCEEDED');
   if(gaps.some(g=>g.startFrame+g.frames>logicalFrames))fail('TIMELINE_OUT_OF_RANGE');
   if(project.voiceClips.some(v=>v.startFrame+outputFrames(v.outUs-v.inUs)>logicalFrames))fail('TIMELINE_GAP');
   if([...project.stickers,...project.musicClips].some(s=>s.startFrame>=logicalFrames||(s.endFrame!==null&&s.endFrame>logicalFrames)))fail('TIMELINE_OUT_OF_RANGE');
@@ -166,7 +166,7 @@ async function verifySpace(root,state){
 
 export class DraftImports {
   constructor(store){this.store=store;}
-  capabilities(){return {schemaVersion:1,workspaceId:this.store.workspaceId,features:[...FEATURES],canvas:{width:1080,height:1920,fps:{numerator:30,denominator:1}},maxDurationFrames:1800,maxAssets:64,maxPlanBytes:MAX_BYTES,maxRequestBytes:MAX_REQUEST_BYTES,maxActivePreparations:16,maxReservedOperations:256,mode:'new-candidate'};}
+  capabilities(){return {schemaVersion:1,workspaceId:this.store.workspaceId,features:[...FEATURES],canvas:{width:1080,height:1920,fps:{numerator:30,denominator:1}},maxDurationFrames:18000,maxAssets:64,maxPlanBytes:MAX_BYTES,maxRequestBytes:MAX_REQUEST_BYTES,maxActivePreparations:16,maxReservedOperations:256,mode:'new-candidate'};}
   scope(request,keys){object(request,keys,'request');if(request.workspaceId!==this.store.workspaceId)fail('WORKSPACE_MISMATCH');id(request.operationId,'operationId');}
   async mapSource(request){
     object(request,['workspaceId','assetId','sha256','bytes','startUs','endUs','frames'],'request');

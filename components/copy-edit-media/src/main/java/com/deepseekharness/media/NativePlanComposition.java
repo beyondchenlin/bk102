@@ -26,12 +26,12 @@ public final class NativePlanComposition {
             MediaItem item=new MediaItem.Builder().setUri(Uri.fromFile(privateBlackImage)).setImageDurationMs((duration+999)/1000).build();
             video.addItem(new EditedMediaItem.Builder(item).setDurationUs(duration).setFrameRate(30).setRemoveAudio(true).build());
         }
-        List<EditedMediaItemSequence> sequences=new ArrayList<>();sequences.add(video.build());
+        List<EditedMediaItemSequence> sequences=new ArrayList<>();sequences.add(video.build());float mixScale=plan.mixScale();
         for(FrozenRenderPlan.Audio a:continuousAudio(plan.audio())){
             EditedMediaItemSequence.Builder sequence=new EditedMediaItemSequence.Builder(Set.of(C.TRACK_TYPE_AUDIO));
             if(a.startFrame()>0)sequence.addGap(Math.round(a.startFrame()*1_000_000d/30));
             sequence.addItem(new EditedMediaItem.Builder(media(a.asset(),a.inUs(),a.outUs())).setDurationUs(a.asset().durationUs()).setRemoveVideo(true)
-                    .setEffects(new Effects(ImmutableList.of(new GainProcessor(new DefaultGainProvider.Builder(a.volume()).build())),ImmutableList.of())).build()).setIsLooping(a.loop());
+                    .setEffects(new Effects(ImmutableList.of(new GainProcessor(new DefaultGainProvider.Builder(a.volume()*mixScale).build())),ImmutableList.of())).build()).setIsLooping(a.loop());
             sequences.add(sequence.build());
         }
         // 有限音乐区间：先播放分割处剩余源片段，再循环完整源，末次精确截尾。
@@ -42,19 +42,19 @@ public final class NativePlanComposition {
             long remaining=Math.round((m.endFrame()-m.startFrame())*1_000_000d/30),offset=Math.min(m.asset().durationUs()-1,Math.round(m.offsetSamples()*1_000_000d/48000));
             while(remaining>0){long duration=Math.min(remaining,m.asset().durationUs()-offset);
                 sequence.addItem(new EditedMediaItem.Builder(media(m.asset(),offset,offset+duration)).setDurationUs(m.asset().durationUs()).setRemoveVideo(true)
-                        .setEffects(new Effects(ImmutableList.of(new GainProcessor(new DefaultGainProvider.Builder(m.volume()).build())),ImmutableList.of())).build());
+                        .setEffects(new Effects(ImmutableList.of(new GainProcessor(new DefaultGainProvider.Builder(m.volume()*mixScale).build())),ImmutableList.of())).build());
                 remaining-=duration;offset=0;
             }
             sequences.add(sequence.build());
         }
-        List<Effect> effects=new ArrayList<>();effects.add(Presentation.createForWidthAndHeight(1080,1920,Presentation.LAYOUT_SCALE_TO_FIT));
+        // 预览直接在360×640画布合成，避免先处理1080p贴片再缩小。
+        List<Effect> effects=new ArrayList<>();effects.add(Presentation.createForWidthAndHeight(plan.preview()?360:1080,plan.preview()?640:1920,Presentation.LAYOUT_SCALE_TO_FIT));
         // 分组避免单个着色器超出设备纹理单元数；保持计划中的贴片先后顺序。
         List<TextureOverlay> overlays=new ArrayList<>();
         for(FrozenRenderPlan.Sticker sticker:plan.stickers()){
-            overlays.add(new TimedSticker(sticker));if(overlays.size()==8){effects.add(new OverlayEffect(ImmutableList.copyOf(overlays)));overlays.clear();}
+            overlays.add(new TimedSticker(sticker,plan.preview()?1f/3:1));if(overlays.size()==8){effects.add(new OverlayEffect(ImmutableList.copyOf(overlays)));overlays.clear();}
         }
         if(!overlays.isEmpty())effects.add(new OverlayEffect(ImmutableList.copyOf(overlays)));
-        if(plan.preview())effects.add(Presentation.createForWidthAndHeight(360,640,Presentation.LAYOUT_SCALE_TO_FIT));
         return new Composition.Builder(sequences).setEffects(new Effects(ImmutableList.of(new AudioTailPadding(plan.expectedFrames())),effects)).setTransmuxVideo(false).setTransmuxAudio(false).build();
     }
     // UI分段不应重建连续源的解码器。只合并源区间、工程时间及音量完全连续的配音；
@@ -72,10 +72,10 @@ public final class NativePlanComposition {
     private static MediaItem media(AuthorizedAssets.Asset asset,long start,long end){return new MediaItem.Builder().setUri(Uri.fromFile(asset.file())).setClippingConfiguration(new MediaItem.ClippingConfiguration.Builder().setStartPositionUs(start).setEndPositionUs(end).build()).build();}
     private static final class TimedSticker extends BitmapOverlay {
         private final FrozenRenderPlan.Sticker source;private Bitmap bitmap;private final StaticOverlaySettings visible,hidden;
-        TimedSticker(FrozenRenderPlan.Sticker source){
+        TimedSticker(FrozenRenderPlan.Sticker source,float canvasScale){
             this.source=source;bitmap=BitmapFactory.decodeFile(source.asset().file().toString());if(bitmap==null)throw new IllegalArgumentException("INVALID_STICKER_BITMAP");
             float scale=source.width()/1080f,cx=source.x()+source.width()/2f,cy=source.y()+400*scale/2;
-            visible=settings(scale,cx,cy,1);hidden=settings(scale,cx,cy,0);
+            visible=settings(scale*canvasScale,cx,cy,1);hidden=settings(scale*canvasScale,cx,cy,0);
         }
         private StaticOverlaySettings settings(float scale,float cx,float cy,float alpha){return new StaticOverlaySettings.Builder().setScale(scale,scale).setBackgroundFrameAnchor(cx/540-1,1-cy/960).setAlphaScale(alpha).build();}
         // Media3在镜头的选帧效果变化时重建GL链，同一个全局贴片会重新使用。

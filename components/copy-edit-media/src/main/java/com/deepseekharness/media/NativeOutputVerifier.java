@@ -27,13 +27,13 @@ public final class NativeOutputVerifier {
             }
             boolean expectsAudio=!(snapshot instanceof FrozenRenderPlan p)||!p.audio().isEmpty()||!p.music().isEmpty();
             if(video<0||audio!=(expectsAudio?1:0))throw new IllegalArgumentException("OUTPUT_TRACKS");extractor.selectTrack(video);
-            List<Long> pts=new ArrayList<>();while(extractor.getSampleTime()>=0){if(pts.size()>=1801)throw new IllegalArgumentException("OUTPUT_FRAME_LIMIT");pts.add(extractor.getSampleTime());extractor.advance();}
+            List<Long> pts=new ArrayList<>();while(extractor.getSampleTime()>=0){if(pts.size()>=18001)throw new IllegalArgumentException("OUTPUT_FRAME_LIMIT");pts.add(extractor.getSampleTime());extractor.advance();}
             Collections.sort(pts);if(pts.size()!=snapshot.expectedFrames())throw new IllegalArgumentException("OUTPUT_FRAME_COUNT");
             for(int i=0;i<pts.size();i++)if(Math.abs(pts.get(i)-Math.round(i*1_000_000d/30))>2)throw new IllegalArgumentException("OUTPUT_PTS frame="+i+" actual="+pts.get(i));
             if(audioTrack>=0&&snapshot instanceof FrozenRenderPlan){
                 extractor.unselectTrack(video);extractor.selectTrack(audioTrack);extractor.seekTo(0,MediaExtractor.SEEK_TO_PREVIOUS_SYNC);
                 long last=Long.MIN_VALUE;int count=0;
-                while(extractor.getSampleTrackIndex()>=0){long next=extractor.getSampleTime();if(++count>6000||next<=last||extractor.getSampleSize()<=0)throw new IllegalArgumentException("OUTPUT_AUDIO_PTS");last=next;extractor.advance();}
+                while(extractor.getSampleTrackIndex()>=0){long next=extractor.getSampleTime();if(++count>Math.ceil(snapshot.expectedFrames()/30d*sampleRate/1024)+16||next<=last||extractor.getSampleSize()<=0)throw new IllegalArgumentException("OUTPUT_AUDIO_PTS");last=next;extractor.advance();}
                 long expected=Math.round(snapshot.expectedFrames()*1_000_000d/30);
                 if(count==0||last+Math.round(1024*1_000_000d/sampleRate)<expected-2)throw new IllegalArgumentException("OUTPUT_AUDIO_TAIL");
             }

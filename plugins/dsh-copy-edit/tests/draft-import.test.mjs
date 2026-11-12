@@ -186,7 +186,7 @@ test('只有缺口也验证四轨时长，超出总长的占位、声音、贴�
     [p=>p.stickers[0].endFrame=16,'TIMELINE_OUT_OF_RANGE'],
     [p=>p.gaps[0].startFrame=1,'TIMELINE_OUT_OF_RANGE']
   ]){const r=structuredClone(request);r.operationId=randomUUID();mutate(r.plan);await assert.rejects(f.imports.prepare(r),code(expected));}
-  const tooLong=f.request();tooLong.plan.gaps=[{gapId:'long',startFrame:0,frames:1800,text:'保留',reason:'无素材'}];
+  const tooLong=f.request();tooLong.plan.gaps=[{gapId:'long',startFrame:0,frames:18000,text:'保留',reason:'无素材'}];
   await assert.rejects(f.imports.prepare(tooLong),code('DURATION_EXCEEDED'));
 }));
 

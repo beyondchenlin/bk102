@@ -31,7 +31,7 @@ public final class NativeMediaSession implements AutoCloseable {
         directory=new File(context.getCacheDir().getCanonicalFile(),"copy-edit-native/"+UUID.randomUUID());
         assetTasks=new NativeAssetTasks(directory,source);
     }
-    public JSONObject capabilities()throws JSONException {return new JSONObject().put("protocol",1).put("available",enabled&&!closed.get()&&!cleanupFailed).put("deviceVerified",false).put("executionLocation","android-local").put("reason",cleanupFailed?"清理未完成，请关闭此页面后重新打开":enabled?"CFR30/竖屏，最多30张PNG；后台或页面退出取消任务":"原生媒体尚未完成宿主设备验收").put("assetImport",true).put("exactFrames",true).put("segmentedAudio",true).put("maxSeconds",60).put("maxStickers",30);}
+    public JSONObject capabilities()throws JSONException {return new JSONObject().put("protocol",1).put("available",enabled&&!closed.get()&&!cleanupFailed).put("deviceVerified",false).put("executionLocation","android-local").put("reason",cleanupFailed?"清理未完成，请关闭此页面后重新打开":enabled?"30fps竖屏工程，最长10分钟、最多30张PNG；后台或页面退出取消任务":"原生媒体尚未完成宿主设备验收").put("assetImport",true).put("exactFrames",true).put("segmentedAudio",true).put("maxSeconds",600).put("maxStickers",30);}
     private static void mainThread(){if(Looper.myLooper()!=Looper.getMainLooper())throw new IllegalStateException("MEDIA_MAIN_THREAD_REQUIRED");}
     public JSONObject start(String id,String project,long revision,String profile)throws Exception {
         mainThread();if(!enabled||closed.get()||cleanupFailed)throw new IllegalStateException("NATIVE_MEDIA_UNAVAILABLE");

@@ -3,7 +3,8 @@ import {newProject,editProject,compilePlan} from '../src/project.mjs';import {pr
 const assets=[{assetId:'v',kind:'video',sha256:'a'.repeat(64),ptsUs:Array.from({length:300},(_,n)=>Math.round(n*1e6/30)),endUs:10e6},{assetId:'png',kind:'image',width:1080,height:400,sha256:'b'.repeat(64)},{assetId:'voice',kind:'audio',durationUs:2e6,sha256:'c'.repeat(64)}];
 const content={assetId:'png',text:'文字一',color:'#ffffff',stroke:'#202124',background:'#202124',transparent:true,x:0,y:230,width:1080};
 const edit=(p,c)=>editProject(p,c,assets);
-const setup=()=>edit(newProject(),{type:'addClip',assetId:'v'});
+// 明确构造旧版4秒镜头，兼容测试不依赖新版完整添加的默认长度。
+const setup=()=>{const p=edit(newProject(),{type:'addClip',assetId:'v'});return edit(p,{type:'trimClip',clipId:p.clips[0].clipId,inFrame:0,outFrame:120});};
 test('旧单贴片读取不迁移，第一次按标识修改才原子转为多贴片',()=>{
   let p=edit(setup(),{type:'setSticker',sticker:content});const before=JSON.stringify(p),s=projectStickers(p)[0];
   assert.equal(s.stickerId,'legacy-sticker');assert.equal(s.endFrame,null);assert.equal(compilePlan(p,assets).stickers[0].endFrame,120);assert.equal(JSON.stringify(p),before);
@@ -28,7 +29,7 @@ test('工程缩短只裁显示范围，不删除后方贴片，恢复长度后�
   p=edit(p,{type:'trimClip',clipId:p.clips[0].clipId,inFrame:0,outFrame:180});assert.equal(compilePlan(p,assets).stickers[0].endFrame,150);
 });
 test('非法区间、重复标识和超额贴片拒绝且保留原件',()=>{
-  let p=setup();const before=JSON.stringify(p);for(const [startFrame,endFrame]of [[-1,30],[0,0],[30,29],[0,1801],[.5,30],[NaN,30],[0,undefined]])assert.throws(()=>edit(p,{type:'addSticker',sticker:{...content,startFrame,endFrame}}));assert.equal(JSON.stringify(p),before);
+  let p=setup();const before=JSON.stringify(p);for(const [startFrame,endFrame]of [[-1,30],[0,0],[30,29],[0,18001],[.5,30],[NaN,30],[0,undefined]])assert.throws(()=>edit(p,{type:'addSticker',sticker:{...content,startFrame,endFrame}}));assert.equal(JSON.stringify(p),before);
   for(let i=0;i<120;i++)p=edit(p,{type:'addSticker',sticker:{...content,startFrame:0,endFrame:1}});assert.throws(()=>edit(p,{type:'addSticker',sticker:{...content,startFrame:0,endFrame:1}}),/120/);
   const copy=structuredClone(p);copy.stickers[1].stickerId=copy.stickers[0].stickerId;assert.throws(()=>compilePlan(copy,assets),/重复/);assert.throws(()=>edit(p,{type:'removeSticker',stickerId:'missing'}),/不存在/);
 });

@@ -9,7 +9,7 @@ import {id,assetOf,integer,compilePlan,newProject,editProject} from './project.m
 const FORMATS='mov,matroska,webm,wav,mp3,png_pipe';
 const SAFE=['-protocol_whitelist','file,pipe','-format_whitelist',FORMATS];
 // 渲染语义改变时升级此标识。旧文件保留，但不能作为新引擎的预览缓存。
-const RENDER_VERSION='desktop-ffmpeg-av6';
+const RENDER_VERSION='desktop-ffmpeg-av7-source-audio';
 export async function hashFile(file) {const h=createHash('sha256');for await(const b of createReadStream(file))h.update(b);return h.digest('hex');}
 export class DesktopMedia {
   constructor(store, options={}) {
@@ -25,10 +25,10 @@ export class DesktopMedia {
   }
   capabilities() {return {contractVersion:1,provider:'desktop-ffmpeg',executionLocation:'dsh-host',platform:process.platform,
     surfaceMode:'rendered-file',available:this.available,frameStep:this.available,continuousPreview:this.available,
-    local1080pExport:this.available,maxDurationUs:60000000,maxImportBytes:512*1024*1024,androidNative:false,renderVersion:RENDER_VERSION};}
+    local1080pExport:this.available,maxDurationUs:600000000,maxImportBytes:512*1024*1024,androidNative:false,renderVersion:RENDER_VERSION};}
   assertAvailable(){if(!this.available||this.life.signal.aborted)throw Error('当前宿主未配置桌面媒体引擎');}
-  run(binary,args,signal,limit=16*1024*1024) {
-    const combined=AbortSignal.any([this.life.signal,...(signal?[signal]:[]),AbortSignal.timeout(180000)]);
+  run(binary,args,signal,limit=16*1024*1024,timeout=180000) {
+    const combined=AbortSignal.any([this.life.signal,...(signal?[signal]:[]),AbortSignal.timeout(timeout)]);
     combined.throwIfAborted();
     return new Promise((resolve,reject)=>{
       const child=spawn(binary,args,{windowsHide:true,shell:false,stdio:['ignore','pipe','pipe'],signal:combined});
@@ -62,7 +62,7 @@ export class DesktopMedia {
       // 末帧真实时长不可得时，明确以容器时长收尾；不拿平均帧率伪造所有源帧。
       const endUs=tail>0?ptsUs.at(-1)+tail:Math.round(duration*1000000);
       if(endUs<=ptsUs.at(-1))throw Error('无法确定末帧边界');
-      return {kind:'video',width:video.width,height:video.height,mime:'video/mp4',ptsUs,endUs,originUs,codec:video.codec_name};
+      return {kind:'video',width:video.width,height:video.height,mime:'video/mp4',ptsUs,endUs,originUs,codec:video.codec_name,hasAudio:info.streams.some(s=>s.codec_type==='audio')};
     }
     const audio=info.streams.find(s=>s.codec_type==='audio'),durationUs=Math.round(Number(info.format.duration||audio?.duration)*1000000);
     if(!audio||!Number.isFinite(durationUs)||durationUs<=0||durationUs>600000000)throw Error('音频需在 10 分钟以内');
@@ -152,10 +152,18 @@ export class DesktopMedia {
       for(const asset of plan.assets)if(await hashFile(this.fileFor(asset.assetId))!==asset.sha256)throw Error('素材内容已变化，请重新导入');
       const args=['-v','error','-nostdin','-y','-filter_complex_threads','1'];
       const w=job.profile==='preview'?360:1080,h=job.profile==='preview'?640:1920;
-      const filters=[];let input=0;
+      const filters=[],audio=[];const seconds=plan.totalFrames/30;let input=0;
       for(const clip of plan.clips) {
         args.push('-threads','2',...SAFE,'-i',this.fileFor(clip.assetId));
         const source=clip.window||{inFrame:clip.inFrame,outFrame:clip.outFrame,offset:0};
+        const asset=assetOf(this.store.state.assets,clip.assetId),volume=clip.sourceVolume??1;
+        // 旧库可能没有hasAudio；从已核验摘要的实际文件确认，不猜测音轨存在。
+        const hasAudio=volume>0&&(asset.hasAudio??JSON.parse((await this.run(this.ffprobe,['-v','error',...SAFE,'-show_entries','stream=codec_type','-of','json',this.fileFor(clip.assetId)],signal)).toString()).streams.some(s=>s.codec_type==='audio'));
+        if(hasAudio){
+          const start=(asset.originUs||0)+asset.ptsUs[source.inFrame]+Math.round(source.offset*1e6/30),end=Math.min((asset.originUs||0)+(source.outFrame===asset.ptsUs.length?asset.endUs:asset.ptsUs[source.outFrame]),start+Math.round(clip.frames*1e6/30));
+          filters.push(`[${input}:a:0]atrim=start=${start/1e6}:end=${end/1e6},asetpts=PTS-${start}/1000000/TB,aresample=48000:async=1:first_pts=0,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=${volume},apad,atrim=end_sample=${clip.frames*1600},adelay=${clip.startFrame*1600}S:all=1,asetpts=N/SR/TB,apad,atrim=end_sample=${plan.totalFrames*1600}[source${input}]`);
+          audio.push(`[source${input}]`);
+        }
         filters.push(`[${input}:v:0]trim=start_frame=${source.inFrame}:end_frame=${source.outFrame},setpts=PTS-STARTPTS,fps=30:start_time=0:round=up,scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,tpad=stop_mode=clone:stop_duration=1,trim=start_frame=${source.offset}:end_frame=${source.offset+clip.frames},setpts=N/(30*TB)[c${input}]`);input++;
       }
       filters.push(plan.clips.map((_,i)=>`[c${i}]`).join('')+`concat=n=${plan.clips.length}:v=1:a=0[base]`);
@@ -168,7 +176,6 @@ export class DesktopMedia {
         // concat 时间基以微秒量化；1us 容差只处理帧边界，不能多显示一帧。
         filters.push(`[${video}][png${i}]overlay=${Math.round(s.x*w/1080)}:${Math.round(s.y*w/1080)}:shortest=1:enable='gte(t,${s.startFrame/30-0.000001})*lt(t,${s.endFrame/30-0.000001})'[v${i}]`);video='v'+i;input++;
       }
-      const audio=[];const seconds=plan.totalFrames/30;
       for(const role of ['voice','bgm'])if(plan.audio[role]) {
         if(role==='bgm')args.push('-stream_loop','-1');
         args.push(...SAFE,'-i',this.fileFor(plan.audio[role].assetId));
@@ -194,8 +201,8 @@ export class DesktopMedia {
       await fs.writeFile(path.join(dir,'filters.txt'),filters.join(';'));args.push('-filter_complex_script',path.join(dir,'filters.txt'),'-map',`[${video}]`);
       if(audio.length)args.push('-map','[a]','-c:a','aac','-b:a','192k');else args.push('-an');
       args.push('-c:v','libx264','-threads','2','-preset','veryfast','-crf',job.profile==='preview'?'24':'20',
-        '-pix_fmt','yuv420p','-r','30','-frames:v',String(plan.totalFrames),'-t',String(seconds),'-movflags','+faststart',temp);
-      await this.run(this.ffmpeg,args,signal);signal.throwIfAborted();
+        '-pix_fmt','yuv420p','-r','30','-frames:v',String(plan.totalFrames),'-t',String(seconds),'-movie_timescale','48000','-movflags','+faststart',temp);
+      await this.run(this.ffmpeg,args,signal,16*1024*1024,Math.max(180000,seconds*3000));signal.throwIfAborted();
       const probe=JSON.parse((await this.run(this.ffprobe,['-v','error','-count_frames','-show_streams','-of','json',temp],signal)).toString());
       const v=probe.streams.find(s=>s.codec_type==='video');
       if(v?.width!==w||v?.height!==h||Number(v.nb_read_frames)!==plan.totalFrames)throw Error(`成片尺寸或帧数未通过校验：${v?.width}×${v?.height} / ${v?.nb_read_frames}，预期 ${w}×${h} / ${plan.totalFrames}`);

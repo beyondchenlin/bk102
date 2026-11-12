@@ -10,7 +10,7 @@ import java.util.*;
 /** 会话内的有界成片槽位；只删除本实例亲自创建的临时文件，不扫描旧缓存。 */
 public final class MediaArtifacts {
     private static final Set<String> SLOTS=Set.of("preview.mp4","export.mp4","preview-4s.mp4","preview-60s.mp4","export-4s.mp4","export-60s.mp4");
-    private static final long MAX_ARTIFACT_BYTES=128L*1024*1024;
+    private static final long MAX_ARTIFACT_BYTES=512L*1024*1024;
     public record Pending(Path path,String slot,String key) {}
     private record Ready(String key,long bytes,String sha256) {}
     private final Path directory;

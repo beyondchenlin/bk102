@@ -7,7 +7,7 @@ function nearestBoundary(asset,target,min,max){
   if(lo>min&&target-boundaryUs(asset,lo-1)<=boundaryUs(asset,lo)-target)return lo-1;
   return lo;
 }
-function trimBounds(asset,clip,edge,maxFrames=1800,minFrames=1){
+function trimBounds(asset,clip,edge,maxFrames=18000,minFrames=1){
   if(!['in','out'].includes(edge)||!Number.isSafeInteger(maxFrames)||maxFrames<1)throw Error('无效裁切边界');
   if(edge==='in'){
     let lo=0,hi=clip.outFrame-1;
@@ -22,7 +22,7 @@ function trimBounds(asset,clip,edge,maxFrames=1800,minFrames=1){
   while(lo<hi){const mid=Math.floor((lo+hi)/2);if(durationFrames(asset,clip.inFrame,mid)<minFrames)lo=mid+1;else hi=mid;}
   return {min:lo,max};
 }
-function dragTrim(asset,clip,edge,deltaSeconds,maxFrames=1800,minFrames=1){
+function dragTrim(asset,clip,edge,deltaSeconds,maxFrames=18000,minFrames=1){
   if(!Number.isFinite(deltaSeconds))throw Error('无效拖动距离');
   const bounds=trimBounds(asset,clip,edge,maxFrames,minFrames),initial=edge==='in'?clip.inFrame:clip.outFrame;
   const target=boundaryUs(asset,initial)+deltaSeconds*1000000;
